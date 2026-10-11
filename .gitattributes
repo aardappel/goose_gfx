@@ -1,0 +1,4 @@
+# Every checkout sees the same bytes on Windows, Linux and macOS: the Goose
+# compiler reads these files, and the tests of the Goose repository compare
+# program output with blessed files.
+* text=auto eol=lf
