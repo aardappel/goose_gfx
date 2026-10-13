@@ -287,7 +287,9 @@ struct PassDesc {
 extern "gs_gfx_available" fn available() -> bool;
 
 // A window of width x height in the display's own coordinates, and the GPU
-// device, or false with error() set. The screen has every pixel of the
+// device, or false with error() set. Where those coordinates are pixels
+// (Windows, X11), the window is that times the system's content scale, to
+// look as big as the system's own windows of that size. The screen has every pixel of the
 // window, which a high-density display has more of: screen_size() says how
 // many.
 extern "gs_gfx_open" fn open(title: const u8[:], width: i64, height: i64, flags: i64) -> bool;
@@ -357,6 +359,15 @@ fn screen_size() -> int2 {
     screen_size_into(size);
     size
 }
+// The screen's pixels to each unit of the window's own coordinates, those
+// open() sizes it in: 2 on most high-density displays, 1 elsewhere and
+// headless. It changes when the window moves to a display of another.
+extern "gs_gfx_pixel_density" fn pixel_density() -> f32;
+// The pixel density times the system's content scale, the size it has the
+// display's own text and controls drawn at: 2 on a high-density Mac, 1.5
+// on Windows set to 150%, 1 headless. What a ui is drawn at to look as
+// big as the system's; it changes when the window moves between displays.
+extern "gs_gfx_display_scale" fn display_scale() -> f32;
 
 extern "gs_gfx_time" fn time() -> f64;               // seconds since open
 extern "gs_gfx_delta_time" fn delta_time() -> f64;   // seconds the last frame took

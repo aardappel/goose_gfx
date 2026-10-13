@@ -863,19 +863,28 @@ fn copied(c: Context) -> u8[>..], bool {
 // The texture shapes are drawn with: the one holding its atlas's image.
 extern "gs_ui_null_texture" fn null_texture(c: Context) -> u32;
 // The whole ui `scale` times bigger: laid out as before, in units of the
-// ui's own (window rectangles, rows, the font's size), and drawn with that
-// many pixels to each, which convert() and render() produce and input
-// comes in. A context made by create() or create_from_* has its font baked
-// again at the scale; another's text is as sharp as its atlas was baked
-// (bake(atlas, scale)). Not during a frame; 1 at first.
+// ui's own (window rectangles, rows, the font's size), and drawn with
+// scale times the display scale pixels to each, which convert() and
+// render() produce and input comes in. A context made by create() or
+// create_from_* has its font baked again at that product; another's text is
+// as sharp as its atlas was baked (bake(atlas, scale * display_scale(c))).
+// Not during a frame; 1 at first.
 extern "gs_ui_set_scale" fn set_scale(c: Context, scale: f32) -> bool;
 extern "gs_ui_scale" fn scale(c: Context) -> f32;
+// The display's scale (gfx::display_scale()): its pixel density times the
+// system's content scale, which the ui is drawn that many times bigger for
+// on top of its own scale, so that at a scale of 1 it looks as big as the
+// system's own text on any display, high-density or set to 150%.
+// input_from_gfx keeps it gfx's; a program feeding input of its own sets
+// it. Not during a frame; 1 at first.
+extern "gs_ui_set_display_scale" fn set_display_scale(c: Context, display: f32) -> bool;
+extern "gs_ui_display_scale" fn display_scale(c: Context) -> f32;
 
 // --- input -------------------------------------------------------------------
 
 // A frame's input goes between input_begin and input_end, before any
 // window; input_from_gfx below does it all from gfx's. Positions are
-// pixels, which the ui divides by its scale.
+// pixels, which the ui divides by its scale times its display scale.
 extern "gs_ui_input_begin" fn input_begin_raw(c: Context);
 fn input_begin(c: Context) {
     input_begin_raw(c);
@@ -1993,10 +2002,13 @@ fn input_gfx_key(c: Context, e: gfx::Event) {
 }
 
 // Nuklear's input for a frame from gfx's: the last frame's events in order
-// (keys, typed text, the mouse), its duration, and the clipboard both ways.
-// Call it once a frame, after gfx::frame() and before any window.
+// (keys, typed text, the mouse), its duration, the clipboard both ways, and
+// the display's scale. Call it once a frame, after gfx::frame() and
+// before any window.
 fn input_from_gfx(c: Context) {
     if renderer.opened != gfx::open_count() { make_renderer(); }
+    let display = gfx::display_scale();
+    if display != display_scale(c) { set_display_scale(c, display); }
     if !renderer.text_input {
         gfx::text_input(true);
         renderer.text_input = true;

@@ -130,6 +130,8 @@ gs_ui_font ui_add_font(gs_ui_font_atlas h, int source, gs_ui_bytes data, float h
 uint8_t *ui_read_font_file(const char *path, int64_t *len);
 /* A ui scale or a font's baking one, a misuse naming `fn` if out of range. */
 bool ui_scale_ok(float scale, const char *fn);
+/* Pixels per unit of a context's layout: its scale times its display's. */
+#define ui_pixels(u) ((u)->scale * (u)->display)
 
 /* --- contexts ---------------------------------------------------------------- */
 
@@ -176,9 +178,11 @@ typedef struct {
        font it was made with or last given by style_set_font. */
     uint32_t atlas;
     bool owns_atlas;            /* made for it, and destroyed with it */
-    /* Pixels per unit of the ui's own layout: what convert() multiplies
-       positions by, and input divides them by. */
+    /* The program's scale and the display's (gfx::display_scale): their product
+       is the pixels per unit of the ui's own layout, what convert()
+       multiplies positions by and input divides them by (ui_pixels). */
     float scale;
+    float display;
     ui_scope scopes[UI_MAX_SCOPES];
     int nscopes;
     bool in_input;              /* between input_begin and input_end */

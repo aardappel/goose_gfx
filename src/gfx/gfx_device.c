@@ -278,6 +278,21 @@ void gs_gfx_screen_size(gs_gfx_int2 *out) {
     out->y = gfx.height;
 }
 
+/* Pixels per unit of the window's own coordinates, as the mouse is scaled
+   by: 1 headless, where those are taken as 1 by 1, and before any open. */
+float gs_gfx_pixel_density(void) {
+    if (gfx.window_w <= 0 || gfx.window_pw <= 0) return 1;
+    return (float)((double)gfx.window_pw / gfx.window_w);
+}
+
+/* The pixel density times the system's content scale (Windows' 150%, a
+   desktop's text scaling), as SDL has it for the window's display: 1
+   headless and before any open. */
+float gs_gfx_display_scale(void) {
+    float s = gfx.window ? SDL_GetWindowDisplayScale(gfx.window) : 0;
+    return s > 0 ? s : 1;
+}
+
 /* --- open and close -------------------------------------------------------- */
 
 uint8_t gs_gfx_available(void) { return 1; }
@@ -399,6 +414,18 @@ static bool gfx_start(bool windowed, gs_gfx_bytes title, int64_t width, int64_t 
                     break;
                 }
             }
+        }
+        /* Where the window's coordinates are pixels (Windows, X11), the system's
+           content scale is not in them: the window grows by it, as the
+           display's own windows do, so that what is sized in its coordinates
+           and drawn at display_scale() fits. Where the coordinates are the
+           display's own (macOS, Wayland), it is in the pixel density. */
+        float density = SDL_GetWindowPixelDensity(gfx.window);
+        float content = density > 0 ? SDL_GetWindowDisplayScale(gfx.window) / density : 1;
+        if (!(flags & GS_GFX_WINDOW_FULLSCREEN) && content > 1.01f) {
+            SDL_SetWindowSize(gfx.window, (int)(width * content + 0.5f),
+                              (int)(height * content + 0.5f));
+            SDL_SyncWindow(gfx.window);
         }
         SDL_GetWindowSizeInPixels(gfx.window, &pw, &ph);
         gfx_update_input_scale();

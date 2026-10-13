@@ -419,6 +419,8 @@ typedef struct {
     X(uint32_t, gs_ui_null_texture, (gs_ui_context c)) \
     X(uint8_t, gs_ui_set_scale, (gs_ui_context c, float scale)) \
     X(float, gs_ui_scale, (gs_ui_context c)) \
+    X(uint8_t, gs_ui_set_display_scale, (gs_ui_context c, float display)) \
+    X(float, gs_ui_display_scale, (gs_ui_context c)) \
     /* Input. */ \
     X(void, gs_ui_input_begin, (gs_ui_context c)) \
     X(void, gs_ui_input_motion, (gs_ui_context c, int64_t x, int64_t y)) \

@@ -148,7 +148,15 @@ fields in the same order, and the same constant values.
   than its size in the display's coordinates, which SDL gives the mouse in:
   positions and motion are multiplied by the window's size in pixels and
   divided by its size in those coordinates, in double, so a whole pixel
-  comes out whole. Injected mouse input is in pixels already.
+  comes out whole; `pixel_density()` is that ratio. Injected mouse input is
+  in pixels already.
+* **The system's content scale** (Windows' 150%, a desktop's text scaling)
+  is in those coordinates on macOS and Wayland, where it makes the pixel
+  density, and not on Windows and X11, where the coordinates are pixels:
+  there `open` grows the window by it, as the system's own windows are
+  grown, so the window looks as big either way.
+  `display_scale()`, SDL's, is the pixel density times the content scale,
+  what ui draws at to look as big as the system's own text.
 * **First-person input** uses SDL's per-window relative mouse mode. Turning
   it on hides the cursor and gives continuous pixel deltas. Focus changes
   are ordered events as well as a query. Focus loss clears held input and

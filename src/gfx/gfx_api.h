@@ -124,6 +124,8 @@ typedef struct {
     X(void, gs_gfx_flush, (void)) \
     X(void, gs_gfx_set_title, (gs_gfx_bytes title)) \
     X(void, gs_gfx_screen_size, (gs_gfx_int2 *out)) \
+    X(float, gs_gfx_pixel_density, (void)) \
+    X(float, gs_gfx_display_scale, (void)) \
     X(gs_gfx_texture, gs_gfx_screen, (void)) \
     X(gs_gfx_texture, gs_gfx_screen_depth, (void)) \
     X(double, gs_gfx_time, (void)) \

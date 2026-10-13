@@ -115,12 +115,17 @@ physics. The constants have Nuklear's values, a static assert in
   `destroy(context)` or `check()`. Nuklear's own asserts are routed into the
   same path.
 
-* **Scale** is the layer's own: a context has one, the pixels to each
-  unit of the ui's layout. Nuklear lays out and draws in its units as ever;
+* **Scale** is the layer's own: a context has one, the program's, and a
+  display scale, gfx's `display_scale()` (SDL's: the pixel density times
+  the system's content scale), and their product is the pixels to each
+  unit of the ui's layout. `input_from_gfx` keeps the display scale gfx's,
+  so at a scale of 1 a ui looks as big as the system's own text, on a
+  high-density display or one set to 150%, and follows its window to a
+  display of another. Nuklear lays out and draws in its units as ever;
   `convert` multiplies the vertices and clip rectangles it produces, and
   the input functions divide positions, keeping the fractions Nuklear's
   whole-number input functions would lose. Text is sharp when its glyphs
-  were baked at the scale: baking an atlas at a scale multiplies each
+  were baked at those pixels: baking an atlas at a scale multiplies each
   font's size before Nuklear rasterizes it and sets the font's height back
   after, and Nuklear, which scales a glyph by that height over the baked
   one, then measures at the size and draws from the bigger glyphs. An
@@ -130,7 +135,7 @@ physics. The constants have Nuklear's values, a static assert in
   contexts and font handles point to, and only their glyphs and the image
   change. A context `create` or `create_from_*` made owns its atlas --
   Nuklear's built-in font, or a TrueType one -- and bakes it again when
-  its scale changes.
+  its scale or display scale changes.
   A destroyed or rebaked atlas's texture is listed for the renderer that
   made it (`released_textures`), which `render` releases, uploading the
   new image.
@@ -260,8 +265,6 @@ lavapipe; the rest pass, the layer's allocations included.
   them on every call, so only `edit_buffer`'s text editors keep history.
 * Custom text filters, and fonts measured by the program, which need a way
   for C to call a Goose function.
-* The display's content scale from gfx (SDL has it), for a program that
-  wants its ui sized as the system's own.
 * Mouse wheel and double-click injection in gfx, for tests of the rest of
   `input_from_gfx`.
 * A property being typed into marks its window's text field focus
