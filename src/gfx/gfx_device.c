@@ -450,8 +450,11 @@ void gs_gfx_close(void) {
     if (gfx.window) {
         SDL_SetWindowRelativeMouseMode(gfx.window, false);
         SDL_ShowCursor();
+        SDL_SetCursor(SDL_GetDefaultCursor());
         SDL_DestroyWindow(gfx.window);
     }
+    for (int i = 0; i < SDL_SYSTEM_CURSOR_COUNT; i++)
+        SDL_DestroyCursor(gfx.cursors[i]);
     if (gfx.video_inited) SDL_QuitSubSystem(SDL_INIT_VIDEO);
     /* What went wrong outlives the device, for gs_gfx_error after a failed
        open. */
@@ -823,6 +826,20 @@ uint8_t gs_gfx_set_mouse_relative(uint8_t on) {
     SDL_FlushEvent(SDL_EVENT_MOUSE_MOTION);
     gfx.mouse_dx = gfx.mouse_dy = 0;
     return 1;
+}
+
+uint8_t gs_gfx_set_cursor(int64_t shape) {
+    if (!gfx_need_device("set_cursor")) return 0;
+    if (shape < GS_GFX_CURSOR_DEFAULT || shape > GS_GFX_CURSOR_W_RESIZE)
+        return gfx_fail("set_cursor: invalid system cursor %lld", (long long)shape);
+    if (!gfx.window) return 1;
+    SDL_Cursor *cursor = gfx.cursors[shape];
+    if (!cursor) {
+        cursor = SDL_CreateSystemCursor((SDL_SystemCursor)shape);
+        if (!cursor) return gfx_sdl_fail("set_cursor: creating a system cursor");
+        gfx.cursors[shape] = cursor;
+    }
+    return SDL_SetCursor(cursor) || gfx_sdl_fail("set_cursor");
 }
 
 uint8_t gs_gfx_set_cursor_visible(uint8_t visible) {

@@ -44,14 +44,32 @@ int main(void) {
     check(!gs_gfx_focused(), "a hidden window starts without focus");
     check(!gs_gfx_set_mouse_relative(true), "capture without focus is rejected");
 
+    check(gs_gfx_set_cursor(GS_GFX_CURSOR_POINTER), "select the pointer cursor");
+    SDL_Cursor *pointer = SDL_GetCursor();
+    check(pointer && pointer != SDL_GetDefaultCursor(), "system cursor reaches SDL");
+    check(gs_gfx_set_cursor(GS_GFX_CURSOR_TEXT), "select the text cursor");
+    check(SDL_GetCursor() != pointer, "changing shape changes the SDL cursor");
+    check(gs_gfx_set_cursor(GS_GFX_CURSOR_POINTER), "select the pointer again");
+    check(SDL_GetCursor() == pointer, "system cursors are reused");
+    check(!gs_gfx_set_cursor(-1), "negative cursor shape is rejected");
+    check(!gs_gfx_set_cursor(INT64_MAX), "oversized cursor shape is rejected");
+    check(!gs_gfx_set_cursor(GS_GFX_CURSOR_W_RESIZE + 1), "unknown cursor shape is rejected");
+    check(SDL_GetCursor() == pointer, "invalid shapes preserve the current cursor");
+    for (int64_t shape = GS_GFX_CURSOR_DEFAULT; shape <= GS_GFX_CURSOR_W_RESIZE; shape++)
+        check(gs_gfx_set_cursor(shape), "select each supported system cursor");
+
     /* Injected focus changes gfx's state, never actual desktop focus. */
     gs_gfx_inject_focus(true);
     gs_gfx_frame();
     check(gs_gfx_set_cursor_visible(false), "hide the cursor");
     check(!SDL_CursorVisible(), "hiding reaches SDL");
+    check(gs_gfx_set_cursor(GS_GFX_CURSOR_POINTER), "change shape while hidden");
+    check(!SDL_CursorVisible(), "changing shape keeps the cursor hidden");
     check(gs_gfx_set_mouse_relative(true), "enable relative mode");
     check(SDL_GetWindowRelativeMouseMode(window), "relative mode reaches the SDL window");
     check(gs_gfx_set_cursor_visible(true), "remember visible preference in relative mode");
+    check(gs_gfx_set_cursor(GS_GFX_CURSOR_TEXT), "change shape in relative mode");
+    check(SDL_GetWindowRelativeMouseMode(window), "changing shape keeps relative mode");
     check(!SDL_CursorVisible(), "relative mode still hides the SDL cursor");
     check(gs_gfx_set_mouse_relative(false), "disable relative mode");
     check(!SDL_GetWindowRelativeMouseMode(window), "relative mode disabled in SDL");
@@ -94,6 +112,15 @@ int main(void) {
     check(gs_gfx_set_mouse_relative(true), "explicitly recapture");
     gs_gfx_close();
     check(SDL_CursorVisible(), "close restores cursor visibility");
+    check(SDL_GetCursor() == SDL_GetDefaultCursor(), "close restores the default cursor");
+
+    check(gs_gfx_open_headless(16, 16, 0), "reopen headless after releasing cursors");
+    SDL_Cursor *before = SDL_GetCursor();
+    for (int64_t shape = GS_GFX_CURSOR_DEFAULT; shape <= GS_GFX_CURSOR_W_RESIZE; shape++)
+        check(gs_gfx_set_cursor(shape), "headless accepts each supported shape");
+    check(!gs_gfx_set_cursor(-1), "headless rejects invalid shapes");
+    check(SDL_GetCursor() == before, "headless leaves the SDL cursor unchanged");
+    gs_gfx_close();
     check(gs_gfx_misuse_count() == 0, "no gfx misuse");
     SDL_Quit();
     if (!failures) puts("gfx window input passed");

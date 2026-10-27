@@ -156,6 +156,14 @@ fields in the same order, and the same constant values.
   recaptures without a call from the program. The headless implementation
   keeps the same logical states, with injected focus for deterministic tests,
   without changing the desktop cursor.
+* **System cursors** are selected with `set_cursor(CURSOR_POINTER)`,
+  `set_cursor(CURSOR_TEXT)`, or another `CURSOR_*` constant matching
+  [SDL_SystemCursor](https://wiki.libsdl.org/SDL3/SDL_SystemCursor).
+  The pinned SDL supports the 20 shapes from `CURSOR_DEFAULT` through
+  `CURSOR_W_RESIZE`. The call returns false on failure, with details in
+  `error()`. It leaves visibility and relative mode unchanged. Headless calls
+  validate the shape without touching the desktop cursor. `close()` restores
+  the default cursor and releases cached shapes.
 * **Pipelines are created for their render targets.** A pipeline description
   does not name its targets. The layer creates a pipeline on first use with
   each combination of color formats, depth format, and sample count.

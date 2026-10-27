@@ -129,6 +129,11 @@ add_executable(goose_audio_test EXCLUDE_FROM_ALL test/audio_device.c)
 target_link_libraries(goose_audio_test PRIVATE goose_audio)
 set_target_properties(goose_audio_test PROPERTIES C_STANDARD 11)
 
+# The window input test requires a display and GPU.
+add_executable(goose_gfx_input_test EXCLUDE_FROM_ALL test/window/gfx_input.c)
+target_link_libraries(goose_gfx_input_test PRIVATE goose_gfx)
+set_target_properties(goose_gfx_input_test PROPERTIES C_STANDARD 11)
+
 file(STRINGS "${GOOSE_GFX_SDL}/include/SDL3/SDL_version.h" gfx_sdl_version
      REGEX "^#define SDL_(MAJOR|MINOR|MICRO)_VERSION +[0-9]+")
 string(REGEX REPLACE "[^;]* ([0-9]+);[^;]* ([0-9]+);[^;]* ([0-9]+)" "\\1.\\2.\\3"

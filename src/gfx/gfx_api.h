@@ -144,6 +144,7 @@ typedef struct {
     X(uint8_t, gs_gfx_focused, (void)) \
     X(uint8_t, gs_gfx_set_mouse_relative, (uint8_t on)) \
     X(uint8_t, gs_gfx_mouse_relative, (void)) \
+    X(uint8_t, gs_gfx_set_cursor, (int64_t shape)) \
     X(uint8_t, gs_gfx_set_cursor_visible, (uint8_t visible)) \
     X(uint8_t, gs_gfx_cursor_visible, (void)) \
     X(uint8_t, gs_gfx_inject_focus, (uint8_t focused)) \
@@ -212,6 +213,27 @@ GS_GFX_API(GS_GFX_PROTO)
     X(i32, WINDOW_FULLSCREEN, 4) \
     X(i32, NO_VSYNC, 16) \
     X(i32, DEBUG, 32) \
+    /* System cursor shapes, SDL_SystemCursor. */ \
+    X(i32, CURSOR_DEFAULT, 0) \
+    X(i32, CURSOR_TEXT, 1) \
+    X(i32, CURSOR_WAIT, 2) \
+    X(i32, CURSOR_CROSSHAIR, 3) \
+    X(i32, CURSOR_PROGRESS, 4) \
+    X(i32, CURSOR_NWSE_RESIZE, 5) \
+    X(i32, CURSOR_NESW_RESIZE, 6) \
+    X(i32, CURSOR_EW_RESIZE, 7) \
+    X(i32, CURSOR_NS_RESIZE, 8) \
+    X(i32, CURSOR_MOVE, 9) \
+    X(i32, CURSOR_NOT_ALLOWED, 10) \
+    X(i32, CURSOR_POINTER, 11) \
+    X(i32, CURSOR_NW_RESIZE, 12) \
+    X(i32, CURSOR_N_RESIZE, 13) \
+    X(i32, CURSOR_NE_RESIZE, 14) \
+    X(i32, CURSOR_E_RESIZE, 15) \
+    X(i32, CURSOR_SE_RESIZE, 16) \
+    X(i32, CURSOR_S_RESIZE, 17) \
+    X(i32, CURSOR_SW_RESIZE, 18) \
+    X(i32, CURSOR_W_RESIZE, 19) \
     /* Shader stages. */ \
     X(i32, VERTEX, 0) \
     X(i32, FRAGMENT, 1) \

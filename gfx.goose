@@ -55,6 +55,28 @@ let WINDOW_FULLSCREEN: i32 = 4;
 let NO_VSYNC: i32 = 16;
 let DEBUG: i32 = 32;            // validation layers, where installed; on in a debug build of gfx
 
+// System cursor shapes.
+let CURSOR_DEFAULT: i32 = 0;
+let CURSOR_TEXT: i32 = 1;
+let CURSOR_WAIT: i32 = 2;
+let CURSOR_CROSSHAIR: i32 = 3;
+let CURSOR_PROGRESS: i32 = 4;
+let CURSOR_NWSE_RESIZE: i32 = 5;
+let CURSOR_NESW_RESIZE: i32 = 6;
+let CURSOR_EW_RESIZE: i32 = 7;
+let CURSOR_NS_RESIZE: i32 = 8;
+let CURSOR_MOVE: i32 = 9;
+let CURSOR_NOT_ALLOWED: i32 = 10;
+let CURSOR_POINTER: i32 = 11;
+let CURSOR_NW_RESIZE: i32 = 12;
+let CURSOR_N_RESIZE: i32 = 13;
+let CURSOR_NE_RESIZE: i32 = 14;
+let CURSOR_E_RESIZE: i32 = 15;
+let CURSOR_SE_RESIZE: i32 = 16;
+let CURSOR_S_RESIZE: i32 = 17;
+let CURSOR_SW_RESIZE: i32 = 18;
+let CURSOR_W_RESIZE: i32 = 19;
+
 // Shader stages.
 let VERTEX: i32 = 0;
 let FRAGMENT: i32 = 1;
@@ -421,6 +443,12 @@ extern "gs_gfx_focused" fn focused() -> bool;
 // Headless, these keep the same state without touching the system mouse.
 extern "gs_gfx_set_mouse_relative" fn set_mouse_relative(on: bool) -> bool;
 extern "gs_gfx_mouse_relative" fn mouse_relative() -> bool;
+
+// Select a system cursor shape, for example set_cursor(CURSOR_POINTER).
+// False on failure, with details in error(). Visibility is unchanged.
+// Headless calls validate the shape without changing the desktop cursor.
+// close() restores the default cursor and frees cached shapes.
+extern "gs_gfx_set_cursor" fn set_cursor(shape: i64) -> bool;
 
 // Visibility outside relative mode; useful when drawing your own cursor.
 // Relative mode always hides it, then restores this preference when disabled.
