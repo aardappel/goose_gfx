@@ -118,6 +118,7 @@ typedef struct {
     SDL_GPUDevice *dev;
     SDL_Window *window;
     bool video_inited;
+    bool gamepad_inited;
     SDL_GPUShaderFormat format;         /* what shaders are handed over as */
     int64_t flags;
 
@@ -157,6 +158,15 @@ typedef struct {
     /* The window's size in its own coordinates, which SDL gives the mouse
        in, and in pixels: a high-density display has more of the second. */
     int window_w, window_h, window_pw, window_ph;
+    /* Gamepads, by slot: opened as SDL reports them, a slot freed when its
+       pad goes away. Buttons are held state plus this frame's edges, like
+       the keys. */
+    struct {
+        SDL_Gamepad *pad;
+        SDL_JoystickID id;
+        uint32_t buttons, pressed, released;
+    } gamepads[GS_GFX_MAX_GAMEPADS];
+    int64_t gamepad_changes;            /* connects plus disconnects since open */
     /* This frame's events in order, for gs_gfx_events. */
     gs_gfx_event *events;
     int64_t nevents, events_cap;

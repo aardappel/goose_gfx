@@ -415,6 +415,45 @@ extern "gs_gfx_mouse_wheel" fn mouse_wheel() -> f32;
 // position injected is on the screen; an injected move decides it in a
 // window too.
 extern "gs_gfx_mouse_in_window" fn mouse_in_window() -> bool;
+
+// Gamepads, in slots 0..MAX_GAMEPADS-1, filled as pads connect (SDL's
+// standard layout: GAMEPAD_SOUTH is A on Xbox, Cross on PlayStation). A
+// slot frees when its pad disconnects; gamepad_changes counts connects and
+// disconnects, so a program can notice either. Buttons are held state plus
+// the latest frame()'s edges, like keys. Sticks are -1..1, triggers 0..1,
+// with no deadzone applied. gamepad_type is SDL's SDL_GamepadType (0 when
+// the slot is empty). Rumble strengths are 0..1; it returns false when
+// the pad cannot rumble.
+let MAX_GAMEPADS = 4;
+let GAMEPAD_SOUTH = 0;
+let GAMEPAD_EAST = 1;
+let GAMEPAD_WEST = 2;
+let GAMEPAD_NORTH = 3;
+let GAMEPAD_BACK = 4;
+let GAMEPAD_GUIDE = 5;
+let GAMEPAD_START = 6;
+let GAMEPAD_LEFT_STICK = 7;
+let GAMEPAD_RIGHT_STICK = 8;
+let GAMEPAD_LEFT_SHOULDER = 9;
+let GAMEPAD_RIGHT_SHOULDER = 10;
+let GAMEPAD_DPAD_UP = 11;
+let GAMEPAD_DPAD_DOWN = 12;
+let GAMEPAD_DPAD_LEFT = 13;
+let GAMEPAD_DPAD_RIGHT = 14;
+let AXIS_LEFT_X = 0;
+let AXIS_LEFT_Y = 1;
+let AXIS_RIGHT_X = 2;
+let AXIS_RIGHT_Y = 3;
+let AXIS_LEFT_TRIGGER = 4;
+let AXIS_RIGHT_TRIGGER = 5;
+extern "gs_gfx_gamepad_connected" fn gamepad_connected(slot: i64) -> bool;
+extern "gs_gfx_gamepad_changes" fn gamepad_changes() -> i64;
+extern "gs_gfx_gamepad_type" fn gamepad_type(slot: i64) -> i64;
+extern "gs_gfx_gamepad_axis" fn gamepad_axis(slot: i64, axis: i64) -> f32;
+extern "gs_gfx_gamepad_down" fn gamepad_down(slot: i64, button: i64) -> bool;
+extern "gs_gfx_gamepad_pressed" fn gamepad_pressed(slot: i64, button: i64) -> bool;
+extern "gs_gfx_gamepad_released" fn gamepad_released(slot: i64, button: i64) -> bool;
+extern "gs_gfx_gamepad_rumble" fn gamepad_rumble(slot: i64, low: f32, high: f32, ms: i64) -> bool;
 fn mouse_pos() -> float2 {
     var p = float2_0;
     mouse_pos_into(p);

@@ -29,6 +29,8 @@
 extern "C" {
 #endif
 
+enum { GS_GFX_MAX_GAMEPADS = 4 };
+
 #pragma pack(push, 1)
 
 typedef struct { uint8_t *data; int64_t len; } gs_gfx_bytes;   /* u8[:], the generated sl_u8 */
@@ -149,6 +151,15 @@ typedef struct {
     X(uint8_t, gs_gfx_cursor_visible, (void)) \
     X(uint8_t, gs_gfx_inject_focus, (uint8_t focused)) \
     X(uint8_t, gs_gfx_inject_key, (gs_gfx_bytes name, uint8_t down)) \
+    /* Gamepads. */ \
+    X(uint8_t, gs_gfx_gamepad_connected, (int64_t slot)) \
+    X(int64_t, gs_gfx_gamepad_changes, (void)) \
+    X(int64_t, gs_gfx_gamepad_type, (int64_t slot)) \
+    X(float, gs_gfx_gamepad_axis, (int64_t slot, int64_t axis)) \
+    X(uint8_t, gs_gfx_gamepad_down, (int64_t slot, int64_t button)) \
+    X(uint8_t, gs_gfx_gamepad_pressed, (int64_t slot, int64_t button)) \
+    X(uint8_t, gs_gfx_gamepad_released, (int64_t slot, int64_t button)) \
+    X(uint8_t, gs_gfx_gamepad_rumble, (int64_t slot, float low, float high, int64_t ms)) \
     X(void, gs_gfx_inject_mouse, (float x, float y, int64_t button, uint8_t down)) \
     X(int64_t, gs_gfx_events, (gs_gfx_event_slice out)) \
     X(void, gs_gfx_text_input, (uint8_t on)) \

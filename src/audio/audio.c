@@ -33,6 +33,11 @@ static struct {
     audio_sound sounds[AUDIO_SOUNDS];
     audio_voice voices[AUDIO_VOICES];
     char error[1024];
+    /* For what the listener hears now: when the last callback ran, how many
+       frames it mixed, and the device's buffer, all mixed ahead of the ear. */
+    uint64_t mix_ticks;
+    int64_t mix_frames;
+    int device_frames;
     uint64_t next_id;  /* Never reset: handles stay stale across close/open. */
 } audio;
 
@@ -122,6 +127,8 @@ static void SDLCALL audio_callback(void *userdata, SDL_AudioStream *stream,
     float block[512];
     // SDL holds its stream lock. Round up to whole stereo frames.
     int64_t frames = ((int64_t)additional + 7) / 8;
+    audio.mix_ticks = SDL_GetTicksNS();
+    audio.mix_frames = frames;
     while (frames > 0) {
         int count = frames > 256 ? 256 : (int)frames;
         audio_mix(block, count);
@@ -157,6 +164,13 @@ uint8_t gs_audio_open(int64_t sample_rate, uint8_t offline) {
         return 0;
     }
     audio.open = true;
+    {
+        SDL_AudioSpec device_spec;
+        int device_frames = 0;
+        if (SDL_GetAudioDeviceFormat(SDL_GetAudioStreamDevice(audio.stream), &device_spec,
+                                     &device_frames) && device_frames > 0)
+            audio.device_frames = device_frames;
+    }
     if (!SDL_ResumeAudioStreamDevice(audio.stream)) {
         audio_sdl_fail();
         gs_audio_close();
@@ -301,6 +315,51 @@ uint8_t gs_audio_set_voice(gs_audio_voice voice, float volume, float pan, float 
         slot->volume = volume;
         slot->pan = pan;
         slot->pitch = pitch;
+        ok = true;
+    }
+    audio_unlock();
+    return ok;
+}
+
+/* Where the listener is in the voice's sound, in seconds: the mixer's place
+   less what is mixed but not yet heard (queued in the stream, and the
+   device's buffer), plus the time since the last callback, at most what it
+   mixed. -1 for a voice that is not playing. */
+double gs_audio_voice_position(gs_audio_voice voice) {
+    audio_lock();
+    audio_voice *slot = audio_find_voice(voice);
+    double seconds = -1;
+    if (slot) {
+        audio_sound *sound = slot->sound;
+        double step = (double)sound->rate / audio.rate * slot->pitch;
+        double frames = slot->position;
+        if (audio.stream) {
+            double ahead = SDL_GetAudioStreamQueued(audio.stream) / 8.0 + audio.device_frames;
+            double since = (double)(SDL_GetTicksNS() - audio.mix_ticks) * 1e-9 * audio.rate;
+            if (since > (double)audio.mix_frames) since = (double)audio.mix_frames;
+            if (audio.mix_ticks == 0) since = 0;
+            frames -= (ahead - since) * step;
+            if (frames < 0) frames = slot->loop ? frames + (double)sound->frames : 0;
+        }
+        seconds = frames / sound->rate;
+    }
+    audio_unlock();
+    return seconds;
+}
+
+/* Move a playing voice to that many seconds into its sound. */
+uint8_t gs_audio_seek(gs_audio_voice voice, double seconds) {
+    audio_lock();
+    audio_voice *slot = audio_find_voice(voice);
+    bool ok = false;
+    if (!slot) audio_fail("voice is no longer playing");
+    else if (!(seconds >= 0)) audio_fail("seek needs a position of 0 or more seconds");
+    else {
+        double frames = seconds * slot->sound->rate;
+        if (frames >= (double)slot->sound->frames)
+            frames = slot->loop ? fmod(frames, (double)slot->sound->frames)
+                                : (double)slot->sound->frames - 1;
+        slot->position = frames;
         ok = true;
     }
     audio_unlock();
