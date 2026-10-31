@@ -483,6 +483,26 @@ void gs_gfx_set_title(gs_gfx_bytes title) {
     if (gfx.window) SDL_SetWindowTitle(gfx.window, gfx_cstr(title, buf, sizeof buf));
 }
 
+/* Desktop fullscreen (the display's own mode, no mode switch), or back to
+   a window. SDL applies it asynchronously; fullscreen() reports the
+   window's current flags. */
+uint8_t gs_gfx_set_fullscreen(uint8_t on) {
+    if (!gfx.window) return 0;
+    if (!SDL_SetWindowFullscreenMode(gfx.window, NULL) || !SDL_SetWindowFullscreen(gfx.window, on != 0)) {
+        gfx_sdl_fail("setting fullscreen");
+        return 0;
+    }
+    return 1;
+}
+
+uint8_t gs_gfx_fullscreen(void) {
+    return gfx.window && (SDL_GetWindowFlags(gfx.window) & SDL_WINDOW_FULLSCREEN) != 0;
+}
+
+void gs_gfx_maximize(void) {
+    if (gfx.window) SDL_MaximizeWindow(gfx.window);
+}
+
 void gs_gfx_quit(void) { gfx.quit = true; }
 
 /* --- frames ------------------------------------------------------------------ */
