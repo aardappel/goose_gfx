@@ -1,7 +1,7 @@
 """Checks that each module of the package and its C layer's API header
 describe the same boundary: gfx.goose against src/gfx/gfx_api.h, ui.goose
 against src/ui/ui_api.h, and audio.goose against src/audio/audio_api.h.
-Every `extern "gs_..." fn` against the header's list of functions,
+Every `extern fn ... = "gs_..."` against the header's list of functions,
 parameter by parameter; every struct that crosses, field by field; and
 every constant. A mismatch there compiles on both sides and then passes
 garbage, which is why it is checked rather than trusted. Copied from
@@ -133,8 +133,9 @@ def parse_goose(text, prefix):
     consts = {m[0]: (m[1], int(m[2]))
               for m in re.findall(r"^let (\w+): (i32|u8) = (-?\d+);", text, re.M)}
     fns = {}
-    for sym, name, params, ret in re.findall(
-            r'extern "(' + prefix + r'\w+)" fn (\w+)\((.*?)\)(?:\s*->\s*([^;{]+?))?\s*;', text, re.S):
+    for name, params, ret, sym in re.findall(
+            r'extern fn (\w+)\((.*?)\)(?:\s*->\s*([^;{=]+?))?\s*=\s*"(' + prefix + r'\w+)"\s*;',
+            text, re.S):
         ps = []
         for p in split_top(params):
             _, _, t = p.partition(":")
