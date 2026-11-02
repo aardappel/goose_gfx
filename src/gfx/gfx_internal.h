@@ -208,6 +208,7 @@ SDL_GPUCommandBuffer *gfx_cmd(void);
 bool gfx_submit(void);
 /* Submits what has been recorded and waits until the GPU has done it all. */
 bool gfx_finish(void);
+void gfx_staging_close(void);
 
 /* The Goose format constants, mapped. */
 bool gfx_texture_format(int32_t format, SDL_GPUTextureFormat *out);

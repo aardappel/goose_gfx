@@ -73,6 +73,47 @@ static SDL_GPUTransferBuffer *gfx_transfer(uint32_t size, bool upload) {
     return tb;
 }
 
+/* Uploads up to this size go through one upload buffer kept for the
+   device's life, mapped with cycling: while a copy still pending uses its
+   memory, SDL hands over other memory it already holds, and only creates
+   more when all of that is in use. Creating and releasing a transfer buffer
+   for every upload costs a tenth of a millisecond or more each time on
+   Direct3D 12, which a few small uploads a frame add up to. Larger uploads
+   (a mesh or a texture loaded once) get a buffer of their own, so the kept
+   one stays small. */
+#define GFX_STAGING_MAX (4u << 20)
+static SDL_GPUTransferBuffer *gfx_staging;
+static uint32_t gfx_staging_size;
+
+/* Mapped memory for an upload of `size` bytes, and in *tb the transfer
+   buffer it belongs to; give both to gfx_staging_done after the copy. */
+static uint8_t *gfx_staging_map(uint32_t size, SDL_GPUTransferBuffer **tb) {
+    if (size > GFX_STAGING_MAX) {
+        *tb = gfx_transfer(size, true);
+        return *tb ? (uint8_t *)SDL_MapGPUTransferBuffer(gfx.dev, *tb, false) : NULL;
+    }
+    if (size > gfx_staging_size) {
+        if (gfx_staging) SDL_ReleaseGPUTransferBuffer(gfx.dev, gfx_staging);
+        uint32_t want = gfx_staging_size ? gfx_staging_size : 64u << 10;
+        while (want < size) want *= 2;
+        gfx_staging = gfx_transfer(want, true);
+        gfx_staging_size = gfx_staging ? want : 0;
+    }
+    *tb = gfx_staging;
+    return gfx_staging ? (uint8_t *)SDL_MapGPUTransferBuffer(gfx.dev, gfx_staging, true) : NULL;
+}
+
+/* After the copy from a gfx_staging_map's buffer is recorded. */
+static void gfx_staging_done(SDL_GPUTransferBuffer *tb) {
+    if (tb != gfx_staging) SDL_ReleaseGPUTransferBuffer(gfx.dev, tb);
+}
+
+void gfx_staging_close(void) {
+    if (gfx_staging && gfx.dev) SDL_ReleaseGPUTransferBuffer(gfx.dev, gfx_staging);
+    gfx_staging = NULL;
+    gfx_staging_size = 0;
+}
+
 /* Where a copy is recorded. A new resource's first contents go through a
    command buffer of their own, submitted at once: it can be created
    anywhere, even inside a pass, and nothing earlier can be using it. Any
@@ -107,12 +148,13 @@ static bool gfx_upload_buffer(SDL_GPUBuffer *buf, uint32_t offset, const void *d
     if (!total) return true;
     SDL_GPUCommandBuffer *cb = gfx_copy_cmd(fresh, what);
     if (!cb) return false;
-    SDL_GPUTransferBuffer *tb = gfx_transfer(total, true);
-    if (!tb) {
+    SDL_GPUTransferBuffer *tb = NULL;
+    uint8_t *p = gfx_staging_map(total, &tb);
+    if (!p) {
+        if (tb) gfx_staging_done(tb);
         if (fresh) SDL_CancelGPUCommandBuffer(cb);
         return false;
     }
-    uint8_t *p = (uint8_t *)SDL_MapGPUTransferBuffer(gfx.dev, tb, false);
     if (len) memcpy(p, data, len);
     if (zeros) memset(p + len, 0, zeros);
     SDL_UnmapGPUTransferBuffer(gfx.dev, tb);
@@ -121,7 +163,7 @@ static bool gfx_upload_buffer(SDL_GPUBuffer *buf, uint32_t offset, const void *d
     SDL_GPUBufferRegion dst = { buf, offset, total };
     SDL_UploadToGPUBuffer(cp, &src, &dst, cycle);
     SDL_EndGPUCopyPass(cp);
-    SDL_ReleaseGPUTransferBuffer(gfx.dev, tb);
+    gfx_staging_done(tb);
     return gfx_copy_done(cb, fresh);
 }
 
@@ -373,12 +415,13 @@ static bool gfx_upload_texture(const SDL_GPUTextureRegion *reg, const void *data
                                bool fresh, const char *what) {
     SDL_GPUCommandBuffer *cb = gfx_copy_cmd(fresh, what);
     if (!cb) return false;
-    SDL_GPUTransferBuffer *tb = gfx_transfer(len, true);
-    if (!tb) {
+    SDL_GPUTransferBuffer *tb = NULL;
+    uint8_t *p = gfx_staging_map(len, &tb);
+    if (!p) {
+        if (tb) gfx_staging_done(tb);
         if (fresh) SDL_CancelGPUCommandBuffer(cb);
         return false;
     }
-    void *p = SDL_MapGPUTransferBuffer(gfx.dev, tb, false);
     memcpy(p, data, len);
     SDL_UnmapGPUTransferBuffer(gfx.dev, tb);
     SDL_GPUCopyPass *cp = SDL_BeginGPUCopyPass(cb);
@@ -389,7 +432,7 @@ static bool gfx_upload_texture(const SDL_GPUTextureRegion *reg, const void *data
     src.rows_per_layer = reg->h;
     SDL_UploadToGPUTexture(cp, &src, reg, false);
     SDL_EndGPUCopyPass(cp);
-    SDL_ReleaseGPUTransferBuffer(gfx.dev, tb);
+    gfx_staging_done(tb);
     return gfx_copy_done(cb, fresh);
 }
 
