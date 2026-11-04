@@ -243,14 +243,16 @@ mouse confinement and Alt-Tab still need an interactive check on each platform.
 | Showcase | JIT, cl, clang-cl, clang; Direct3D 12 and Vulkan | JIT, gcc, clang; Vulkan | not run |
 
 On Windows the showcase's screenshots from Direct3D 12 and Vulkan differ by
-0.65 of 255 per channel on average. On Linux with no display at all (the CI
-runner's case, simulated by unsetting `DISPLAY` and `WAYLAND_DISPLAY`), SDL's
-video initialization fails and `open_headless` falls back to SDL's offscreen
-video driver, which gives the Vulkan backend what it needs: the `test/gfx/`
-programs run there unchanged. Nothing on macOS has run: the MSL that
-cute_spirv emits, SDL's Metal backend under this layer, the framework list
-in `link-cc.rsp`, and TinyCC's arm64 calls into the layer are all unverified
-until CI or a Mac runs them.
+0.65 of 255 per channel on average. `open_headless` (and a program run with
+`GOOSE_GFX_HEADLESS=1`) initializes SDL's video with its offscreen driver,
+which gives the Vulkan backend what it needs without a display: the
+`test/gfx/` programs run unchanged on Linux with no display at all (the CI
+runner's case). It does not try the display servers first: in WSL, with
+`DISPLAY` set and WSLg's X server not answering, SDL's X11 driver took 86
+seconds to fail before the fallback, on every program. Nothing on macOS has
+run: the MSL that cute_spirv emits, SDL's Metal backend under this layer,
+the framework list in `link-cc.rsp`, and TinyCC's arm64 calls into the layer
+are all unverified until CI or a Mac runs them.
 
 ## Decisions on the plan's open questions
 
