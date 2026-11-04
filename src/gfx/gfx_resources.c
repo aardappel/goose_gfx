@@ -73,34 +73,51 @@ static SDL_GPUTransferBuffer *gfx_transfer(uint32_t size, bool upload) {
     return tb;
 }
 
-/* Uploads up to this size go through one upload buffer kept for the
-   device's life, mapped with cycling: while a copy still pending uses its
-   memory, SDL hands over other memory it already holds, and only creates
-   more when all of that is in use. Creating and releasing a transfer buffer
-   for every upload costs a tenth of a millisecond or more each time on
-   Direct3D 12, which a few small uploads a frame add up to. Larger uploads
-   (a mesh or a texture loaded once) get a buffer of their own, so the kept
-   one stays small. */
-#define GFX_STAGING_MAX (4u << 20)
-static SDL_GPUTransferBuffer *gfx_staging;
-static uint32_t gfx_staging_size;
+/* Uploads up to GFX_STAGING_SIZE bytes are packed one after another into a
+   single upload buffer of that size, kept for the device's life. Creating
+   and releasing a transfer buffer for every upload costs a tenth of a
+   millisecond or more each time on Direct3D 12, which a few small uploads a
+   frame add up to.
 
-/* Mapped memory for an upload of `size` bytes, and in *tb the transfer
-   buffer it belongs to; give both to gfx_staging_done after the copy. */
-static uint8_t *gfx_staging_map(uint32_t size, SDL_GPUTransferBuffer **tb) {
-    if (size > GFX_STAGING_MAX) {
+   Each upload takes the next free region, mapped without cycling: nothing
+   pending reads a region not yet handed out. When the next upload doesn't
+   fit, the buffer is mapped with cycling and filling starts again at 0;
+   SDL hands over memory it already holds once the copies from it are done,
+   and only creates another copy of the whole buffer while they are pending,
+   so there are only ever a few. Larger uploads (a mesh or a texture loaded
+   once) get a buffer of their own.
+
+   Texture uploads start on a 512-byte boundary, Direct3D 12's placement
+   alignment (otherwise SDL copies the data again into a temporary buffer of
+   its own); that is also a multiple of every texel block size, as Vulkan
+   asks. Buffer uploads start on a 16-byte one. */
+#define GFX_STAGING_SIZE (4u << 20)
+static SDL_GPUTransferBuffer *gfx_staging;
+static uint32_t gfx_staging_used;
+
+/* Mapped memory for an upload of `size` bytes, starting at *offset in the
+   transfer buffer *tb; give *tb to gfx_staging_done after the copy. */
+static uint8_t *gfx_staging_map(uint32_t size, uint32_t align, SDL_GPUTransferBuffer **tb,
+                                uint32_t *offset) {
+    *offset = 0;
+    if (size > GFX_STAGING_SIZE) {
         *tb = gfx_transfer(size, true);
         return *tb ? (uint8_t *)SDL_MapGPUTransferBuffer(gfx.dev, *tb, false) : NULL;
     }
-    if (size > gfx_staging_size) {
-        if (gfx_staging) SDL_ReleaseGPUTransferBuffer(gfx.dev, gfx_staging);
-        uint32_t want = gfx_staging_size ? gfx_staging_size : 64u << 10;
-        while (want < size) want *= 2;
-        gfx_staging = gfx_transfer(want, true);
-        gfx_staging_size = gfx_staging ? want : 0;
+    if (!gfx_staging) {
+        gfx_staging = gfx_transfer(GFX_STAGING_SIZE, true);
+        gfx_staging_used = 0;
     }
     *tb = gfx_staging;
-    return gfx_staging ? (uint8_t *)SDL_MapGPUTransferBuffer(gfx.dev, gfx_staging, true) : NULL;
+    if (!gfx_staging) return NULL;
+    uint32_t at = (gfx_staging_used + align - 1) & ~(align - 1);
+    bool cycle = at > GFX_STAGING_SIZE - size;
+    if (cycle) at = 0;
+    uint8_t *p = (uint8_t *)SDL_MapGPUTransferBuffer(gfx.dev, gfx_staging, cycle);
+    if (!p) return NULL;
+    gfx_staging_used = at + size;
+    *offset = at;
+    return p + at;
 }
 
 /* After the copy from a gfx_staging_map's buffer is recorded. */
@@ -111,7 +128,7 @@ static void gfx_staging_done(SDL_GPUTransferBuffer *tb) {
 void gfx_staging_close(void) {
     if (gfx_staging && gfx.dev) SDL_ReleaseGPUTransferBuffer(gfx.dev, gfx_staging);
     gfx_staging = NULL;
-    gfx_staging_size = 0;
+    gfx_staging_used = 0;
 }
 
 /* Where a copy is recorded. A new resource's first contents go through a
@@ -149,7 +166,8 @@ static bool gfx_upload_buffer(SDL_GPUBuffer *buf, uint32_t offset, const void *d
     SDL_GPUCommandBuffer *cb = gfx_copy_cmd(fresh, what);
     if (!cb) return false;
     SDL_GPUTransferBuffer *tb = NULL;
-    uint8_t *p = gfx_staging_map(total, &tb);
+    uint32_t at;
+    uint8_t *p = gfx_staging_map(total, 16, &tb, &at);
     if (!p) {
         if (tb) gfx_staging_done(tb);
         if (fresh) SDL_CancelGPUCommandBuffer(cb);
@@ -159,7 +177,7 @@ static bool gfx_upload_buffer(SDL_GPUBuffer *buf, uint32_t offset, const void *d
     if (zeros) memset(p + len, 0, zeros);
     SDL_UnmapGPUTransferBuffer(gfx.dev, tb);
     SDL_GPUCopyPass *cp = SDL_BeginGPUCopyPass(cb);
-    SDL_GPUTransferBufferLocation src = { tb, 0 };
+    SDL_GPUTransferBufferLocation src = { tb, at };
     SDL_GPUBufferRegion dst = { buf, offset, total };
     SDL_UploadToGPUBuffer(cp, &src, &dst, cycle);
     SDL_EndGPUCopyPass(cp);
@@ -416,7 +434,8 @@ static bool gfx_upload_texture(const SDL_GPUTextureRegion *reg, const void *data
     SDL_GPUCommandBuffer *cb = gfx_copy_cmd(fresh, what);
     if (!cb) return false;
     SDL_GPUTransferBuffer *tb = NULL;
-    uint8_t *p = gfx_staging_map(len, &tb);
+    uint32_t at;
+    uint8_t *p = gfx_staging_map(len, 512, &tb, &at);
     if (!p) {
         if (tb) gfx_staging_done(tb);
         if (fresh) SDL_CancelGPUCommandBuffer(cb);
@@ -428,6 +447,7 @@ static bool gfx_upload_texture(const SDL_GPUTextureRegion *reg, const void *data
     SDL_GPUTextureTransferInfo src;
     SDL_zero(src);
     src.transfer_buffer = tb;
+    src.offset = at;
     src.pixels_per_row = reg->w;
     src.rows_per_layer = reg->h;
     SDL_UploadToGPUTexture(cp, &src, reg, false);
