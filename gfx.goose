@@ -367,6 +367,13 @@ fn flush() {
     check();
 }
 extern "gs_gfx_set_title" fn set_title(title: const u8[:]);
+// Borderless fullscreen at the desktop's resolution, or back to a window
+// (false if the window can't change). SDL changes it asynchronously, so
+// fullscreen() can lag a frame or two behind. maximize fills the desktop
+// as a window.
+extern "gs_gfx_set_fullscreen" fn set_fullscreen(on: bool) -> bool;
+extern "gs_gfx_fullscreen" fn fullscreen() -> bool;
+extern "gs_gfx_maximize" fn maximize();
 
 // The screen: what a frame draws into, an RGBA8 texture of the window's
 // size in pixels, with a depth texture to go with it. Both keep their
