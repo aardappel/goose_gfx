@@ -32,7 +32,9 @@ GS_AUDIO_CONSTANTS(GS_AUDIO_CONST)
     X(void, gs_audio_stop, (gs_audio_voice voice)) \
     X(void, gs_audio_stop_all, (void)) \
     X(uint8_t, gs_audio_set_voice, (gs_audio_voice voice, float volume, float pan, float pitch)) \
-    X(uint8_t, gs_audio_render, (gs_audio_f32_slice out))
+    X(uint8_t, gs_audio_render, (gs_audio_f32_slice out)) \
+    X(double, gs_audio_voice_position, (gs_audio_voice voice)) \
+    X(uint8_t, gs_audio_seek, (gs_audio_voice voice, double seconds))
 
 #define GS_AUDIO_PROTO(ret, name, params) ret name params;
 GS_AUDIO_API(GS_AUDIO_PROTO)

@@ -74,3 +74,10 @@ extern "gs_audio_set_voice" fn set_voice(voice: Voice, volume: f32,
 // by len(out)/2 frames. Empty is valid. Samples are clipped to [-1, 1].
 // Device playback uses this same linear-interpolation mixer automatically.
 extern "gs_audio_render" fn render(out: f32[:]) -> bool;
+
+// Where the listener is in a playing voice's sound, in seconds: the mixer's
+// place less what is mixed but still buffered on its way to the speakers,
+// smoothed between the device's callbacks. -1 when the voice is not
+// playing. seek moves a playing voice to that many seconds into its sound.
+extern "gs_audio_voice_position" fn voice_position(voice: Voice) -> f64;
+extern "gs_audio_seek" fn seek(voice: Voice, seconds: f64) -> bool;

@@ -353,6 +353,8 @@ static bool gfx_start(bool windowed, gs_gfx_bytes title, int64_t width, int64_t 
         if (!ok) return gfx_sdl_fail("initializing SDL video");
     }
     gfx.video_inited = true;
+    /* No gamepad subsystem is no gamepads, not a failure. */
+    gfx.gamepad_inited = SDL_InitSubSystem(SDL_INIT_GAMEPAD);
     SDL_GPUShaderFormat formats = SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_MSL;
     if (gfx_have_dxbc()) formats |= SDL_GPU_SHADERFORMAT_DXBC;
 #ifdef NDEBUG
@@ -455,6 +457,9 @@ void gs_gfx_close(void) {
     }
     for (int i = 0; i < SDL_SYSTEM_CURSOR_COUNT; i++)
         SDL_DestroyCursor(gfx.cursors[i]);
+    for (int i = 0; i < GS_GFX_MAX_GAMEPADS; i++)
+        if (gfx.gamepads[i].pad) SDL_CloseGamepad(gfx.gamepads[i].pad);
+    if (gfx.gamepad_inited) SDL_QuitSubSystem(SDL_INIT_GAMEPAD);
     if (gfx.video_inited) SDL_QuitSubSystem(SDL_INIT_VIDEO);
     /* What went wrong outlives the device, for gs_gfx_error after a failed
        open. */
@@ -604,6 +609,110 @@ static void gfx_focus(bool focused) {
     gfx_event(focused ? GS_GFX_EVENT_FOCUS_GAINED : GS_GFX_EVENT_FOCUS_LOST);
 }
 
+/* --- gamepads --------------------------------------------------------------- */
+
+static int gfx_gamepad_slot_of(SDL_JoystickID id) {
+    for (int i = 0; i < GS_GFX_MAX_GAMEPADS; i++)
+        if (gfx.gamepads[i].pad && gfx.gamepads[i].id == id) return i;
+    return -1;
+}
+
+static void gfx_gamepad_added(SDL_JoystickID id) {
+    if (gfx_gamepad_slot_of(id) >= 0) return;
+    for (int i = 0; i < GS_GFX_MAX_GAMEPADS; i++) {
+        if (gfx.gamepads[i].pad) continue;
+        SDL_Gamepad *pad = SDL_OpenGamepad(id);
+        if (!pad) return;
+        gfx.gamepads[i].pad = pad;
+        gfx.gamepads[i].id = id;
+        gfx.gamepads[i].buttons = gfx.gamepads[i].pressed = gfx.gamepads[i].released = 0;
+        gfx.gamepad_changes++;
+        return;
+    }
+}
+
+static void gfx_gamepad_removed(SDL_JoystickID id) {
+    int i = gfx_gamepad_slot_of(id);
+    if (i < 0) return;
+    SDL_CloseGamepad(gfx.gamepads[i].pad);
+    /* Whatever was held is released by the pad going away. */
+    gfx.gamepads[i].released |= gfx.gamepads[i].buttons;
+    gfx.gamepads[i].buttons = 0;
+    gfx.gamepads[i].pad = NULL;
+    gfx.gamepad_changes++;
+}
+
+static void gfx_gamepad_button(SDL_JoystickID id, uint8_t button, bool down) {
+    int i = gfx_gamepad_slot_of(id);
+    if (i < 0 || button >= 32) return;
+    uint32_t bit = 1u << button;
+    if (down && !(gfx.gamepads[i].buttons & bit)) gfx.gamepads[i].pressed |= bit;
+    if (!down && (gfx.gamepads[i].buttons & bit)) gfx.gamepads[i].released |= bit;
+    if (down) gfx.gamepads[i].buttons |= bit;
+    else gfx.gamepads[i].buttons &= ~bit;
+}
+
+static bool gfx_gamepad_slot(int64_t slot) {
+    if (slot < 0 || slot >= GS_GFX_MAX_GAMEPADS) {
+        gfx_misuse("no gamepad slot %lld: slots are 0..%d", (long long)slot,
+                   GS_GFX_MAX_GAMEPADS - 1);
+        return false;
+    }
+    return true;
+}
+
+static uint32_t gfx_gamepad_bit(int64_t button) {
+    if (button < 0 || button >= SDL_GAMEPAD_BUTTON_COUNT) {
+        gfx_misuse("no gamepad button %lld", (long long)button);
+        return 0;
+    }
+    return 1u << button;
+}
+
+uint8_t gs_gfx_gamepad_connected(int64_t slot) {
+    return gfx_gamepad_slot(slot) && gfx.gamepads[slot].pad != NULL;
+}
+
+int64_t gs_gfx_gamepad_changes(void) { return gfx.gamepad_changes; }
+
+int64_t gs_gfx_gamepad_type(int64_t slot) {
+    if (!gs_gfx_gamepad_connected(slot)) return 0;
+    return (int64_t)SDL_GetGamepadType(gfx.gamepads[slot].pad);
+}
+
+float gs_gfx_gamepad_axis(int64_t slot, int64_t axis) {
+    if (axis < 0 || axis >= SDL_GAMEPAD_AXIS_COUNT) {
+        gfx_misuse("no gamepad axis %lld", (long long)axis);
+        return 0;
+    }
+    if (!gs_gfx_gamepad_connected(slot)) return 0;
+    int16_t v = SDL_GetGamepadAxis(gfx.gamepads[slot].pad, (SDL_GamepadAxis)axis);
+    return v < 0 ? (float)v / 32768.0f : (float)v / 32767.0f;
+}
+
+uint8_t gs_gfx_gamepad_down(int64_t slot, int64_t button) {
+    uint32_t bit = gfx_gamepad_bit(button);
+    return gfx_gamepad_slot(slot) && (gfx.gamepads[slot].buttons & bit) != 0;
+}
+
+uint8_t gs_gfx_gamepad_pressed(int64_t slot, int64_t button) {
+    uint32_t bit = gfx_gamepad_bit(button);
+    return gfx_gamepad_slot(slot) && (gfx.gamepads[slot].pressed & bit) != 0;
+}
+
+uint8_t gs_gfx_gamepad_released(int64_t slot, int64_t button) {
+    uint32_t bit = gfx_gamepad_bit(button);
+    return gfx_gamepad_slot(slot) && (gfx.gamepads[slot].released & bit) != 0;
+}
+
+uint8_t gs_gfx_gamepad_rumble(int64_t slot, float low, float high, int64_t ms) {
+    if (!gs_gfx_gamepad_connected(slot)) return 0;
+    float l = low < 0 ? 0 : low > 1 ? 1 : low, h = high < 0 ? 0 : high > 1 ? 1 : high;
+    uint32_t duration = ms < 0 ? 0 : ms > 0xFFFFFFFF ? 0xFFFFFFFF : (uint32_t)ms;
+    return SDL_RumbleGamepad(gfx.gamepads[slot].pad, (Uint16)(l * 65535), (Uint16)(h * 65535),
+                             duration);
+}
+
 uint8_t gs_gfx_frame(void) {
     if (!gfx_need_device("frame")) return 0;
     if (gfx.pass || gfx.cpass) {
@@ -617,6 +726,8 @@ uint8_t gs_gfx_frame(void) {
     memset(gfx.released_keys, 0, sizeof gfx.released_keys);
     gfx.pressed_buttons = gfx.released_buttons = 0;
     gfx.mouse_dx = gfx.mouse_dy = gfx.wheel = 0;
+    for (int i = 0; i < GS_GFX_MAX_GAMEPADS; i++)
+        gfx.gamepads[i].pressed = gfx.gamepads[i].released = 0;
     gfx.nevents = 0;
     bool resized = false;
     SDL_Event e;
@@ -667,6 +778,16 @@ uint8_t gs_gfx_frame(void) {
                 ev->x = e.wheel.x;
                 ev->y = e.wheel.y;
             } break;
+            case SDL_EVENT_GAMEPAD_ADDED:
+                gfx_gamepad_added(e.gdevice.which);
+                break;
+            case SDL_EVENT_GAMEPAD_REMOVED:
+                gfx_gamepad_removed(e.gdevice.which);
+                break;
+            case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+            case SDL_EVENT_GAMEPAD_BUTTON_UP:
+                gfx_gamepad_button(e.gbutton.which, e.gbutton.button, e.gbutton.down);
+                break;
             case SDL_EVENT_WINDOW_MOUSE_ENTER:
             case SDL_EVENT_WINDOW_MOUSE_LEAVE:
                 gfx.mouse_in = e.type == SDL_EVENT_WINDOW_MOUSE_ENTER;
