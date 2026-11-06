@@ -306,26 +306,26 @@ struct PassDesc {
 
 // Whether the gfx layer is linked in. A compiler without it refuses to run
 // a gfx program in-process, so this is true wherever it runs.
-extern "gs_gfx_available" fn available() -> bool;
+extern fn available() -> bool = "gs_gfx_available";
 
 // A window of width x height in the display's own coordinates, and the GPU
 // device, or false with error() set. The screen has every pixel of the
 // window, which a high-density display has more of: screen_size() says how
 // many.
-extern "gs_gfx_open" fn open(title: const u8[:], width: i64, height: i64, flags: i64) -> bool;
+extern fn open(title: const u8[:], width: i64, height: i64, flags: i64) -> bool = "gs_gfx_open";
 fn open(title: const u8[:], width: i64, height: i64) -> bool { open(title, width, height, 0) }
 // The device alone, drawing into a screen of width x height that no window
 // shows: for tests, and for tools that only compute or render to files.
-extern "gs_gfx_open_headless" fn open_headless(width: i64, height: i64, flags: i64) -> bool;
+extern fn open_headless(width: i64, height: i64, flags: i64) -> bool = "gs_gfx_open_headless";
 fn open_headless(width: i64, height: i64) -> bool { open_headless(width, height, 0) }
-extern "gs_gfx_close" fn close_raw();
+extern fn close_raw() = "gs_gfx_close";
 fn close() {
     check();
     close_raw();
 }
 
-extern "gs_gfx_error" fn error_into(out: u8[:]) -> i64;
-extern "gs_gfx_misuse_count" fn misuse_count() -> i64;
+extern fn error_into(out: u8[:]) -> i64 = "gs_gfx_error";
+extern fn misuse_count() -> i64 = "gs_gfx_misuse_count";
 // Why the last call that failed did, as text.
 fn error() -> u8[>..] {
     var text: u8[>..] = [];
@@ -339,7 +339,7 @@ fn check() {
     if misuse_count() > 0 { abort(str("gfx: ", error())); }
 }
 
-extern "gs_gfx_driver" fn driver_into(out: u8[:]) -> i64;
+extern fn driver_into(out: u8[:]) -> i64 = "gs_gfx_driver";
 // The GPU backend in use: "vulkan", "direct3d12" or "metal".
 fn driver() -> u8[>..] {
     var name: u8[>..] = [];
@@ -353,46 +353,46 @@ fn driver() -> u8[>..] {
 // window, and handles the window's events: false once it has been asked to
 // close, or quit() was called. Called at the top of the loop, before the
 // first frame is drawn.
-extern "gs_gfx_frame" fn frame_raw() -> bool;
+extern fn frame_raw() -> bool = "gs_gfx_frame";
 fn frame() -> bool {
     let running = frame_raw();
     check();
     running
 }
-extern "gs_gfx_quit" fn quit();
+extern fn quit() = "gs_gfx_quit";
 // Submits everything drawn so far and waits until the GPU has done it.
-extern "gs_gfx_flush" fn flush_raw();
+extern fn flush_raw() = "gs_gfx_flush";
 fn flush() {
     flush_raw();
     check();
 }
-extern "gs_gfx_set_title" fn set_title(title: const u8[:]);
+extern fn set_title(title: const u8[:]) = "gs_gfx_set_title";
 // Borderless fullscreen at the desktop's resolution, or back to a window
 // (false if the window can't change). SDL changes it asynchronously, so
 // fullscreen() can lag a frame or two behind. maximize fills the desktop
 // as a window.
-extern "gs_gfx_set_fullscreen" fn set_fullscreen(on: bool) -> bool;
-extern "gs_gfx_fullscreen" fn fullscreen() -> bool;
-extern "gs_gfx_maximize" fn maximize();
+extern fn set_fullscreen(on: bool) -> bool = "gs_gfx_set_fullscreen";
+extern fn fullscreen() -> bool = "gs_gfx_fullscreen";
+extern fn maximize() = "gs_gfx_maximize";
 
 // The screen: what a frame draws into, an RGBA8 texture of the window's
 // size in pixels, with a depth texture to go with it. Both keep their
 // handles when the window resizes.
-extern "gs_gfx_screen" fn screen() -> Texture;
-extern "gs_gfx_screen_depth" fn screen_depth() -> Texture;
-extern "gs_gfx_screen_size" fn screen_size_into(out: int2&);
+extern fn screen() -> Texture = "gs_gfx_screen";
+extern fn screen_depth() -> Texture = "gs_gfx_screen_depth";
+extern fn screen_size_into(out: int2&) = "gs_gfx_screen_size";
 fn screen_size() -> int2 {
     var size = int2_0;
     screen_size_into(size);
     size
 }
 
-extern "gs_gfx_time" fn time() -> f64;               // seconds since open
-extern "gs_gfx_delta_time" fn delta_time() -> f64;   // seconds the last frame took
-extern "gs_gfx_frame_count" fn frame_count() -> i64;
+extern fn time() -> f64 = "gs_gfx_time";               // seconds since open
+extern fn delta_time() -> f64 = "gs_gfx_delta_time";   // seconds the last frame took
+extern fn frame_count() -> i64 = "gs_gfx_frame_count";
 // How many times gfx has been opened in this process: handles made before it
 // last changed were released by close().
-extern "gs_gfx_open_count" fn open_count() -> i64;
+extern fn open_count() -> i64 = "gs_gfx_open_count";
 
 // --- input -------------------------------------------------------------------
 
@@ -406,22 +406,22 @@ extern "gs_gfx_open_count" fn open_count() -> i64;
 // These queries do not consume input; the next frame() clears the edges.
 // The mouse is in the screen's pixels, which on a high-density display
 // outnumber the window's own coordinates.
-extern "gs_gfx_key_down" fn key_down(name: const u8[:]) -> bool;
-extern "gs_gfx_key_pressed" fn key_pressed(name: const u8[:]) -> bool;
-extern "gs_gfx_key_released" fn key_released(name: const u8[:]) -> bool;
-extern "gs_gfx_mouse_down" fn mouse_down(button: i64) -> bool;
-extern "gs_gfx_mouse_pressed" fn mouse_pressed(button: i64) -> bool;
-extern "gs_gfx_mouse_released" fn mouse_released(button: i64) -> bool;
-extern "gs_gfx_mouse_pos" fn mouse_pos_into(out: float2&);
-extern "gs_gfx_mouse_delta" fn mouse_delta_into(out: float2&);
-extern "gs_gfx_mouse_wheel" fn mouse_wheel() -> f32;
+extern fn key_down(name: const u8[:]) -> bool = "gs_gfx_key_down";
+extern fn key_pressed(name: const u8[:]) -> bool = "gs_gfx_key_pressed";
+extern fn key_released(name: const u8[:]) -> bool = "gs_gfx_key_released";
+extern fn mouse_down(button: i64) -> bool = "gs_gfx_mouse_down";
+extern fn mouse_pressed(button: i64) -> bool = "gs_gfx_mouse_pressed";
+extern fn mouse_released(button: i64) -> bool = "gs_gfx_mouse_released";
+extern fn mouse_pos_into(out: float2&) = "gs_gfx_mouse_pos";
+extern fn mouse_delta_into(out: float2&) = "gs_gfx_mouse_delta";
+extern fn mouse_wheel() -> f32 = "gs_gfx_mouse_wheel";
 // Whether the mouse is over the window, or holds a button pressed in it,
 // as SDL's mouse focus says: for a window opened under the mouse, from its
 // first move at the latest. mouse_pos is the mouse's place from open on,
 // and where it left the window while it is outside. Headless, whether the last
 // position injected is on the screen; an injected move decides it in a
 // window too.
-extern "gs_gfx_mouse_in_window" fn mouse_in_window() -> bool;
+extern fn mouse_in_window() -> bool = "gs_gfx_mouse_in_window";
 
 // Gamepads, in slots 0..MAX_GAMEPADS-1, filled as pads connect (SDL's
 // standard layout: GAMEPAD_SOUTH is A on Xbox, Cross on PlayStation). A
@@ -453,14 +453,14 @@ let AXIS_RIGHT_X = 2;
 let AXIS_RIGHT_Y = 3;
 let AXIS_LEFT_TRIGGER = 4;
 let AXIS_RIGHT_TRIGGER = 5;
-extern "gs_gfx_gamepad_connected" fn gamepad_connected(slot: i64) -> bool;
-extern "gs_gfx_gamepad_changes" fn gamepad_changes() -> i64;
-extern "gs_gfx_gamepad_type" fn gamepad_type(slot: i64) -> i64;
-extern "gs_gfx_gamepad_axis" fn gamepad_axis(slot: i64, axis: i64) -> f32;
-extern "gs_gfx_gamepad_down" fn gamepad_down(slot: i64, button: i64) -> bool;
-extern "gs_gfx_gamepad_pressed" fn gamepad_pressed(slot: i64, button: i64) -> bool;
-extern "gs_gfx_gamepad_released" fn gamepad_released(slot: i64, button: i64) -> bool;
-extern "gs_gfx_gamepad_rumble" fn gamepad_rumble(slot: i64, low: f32, high: f32, ms: i64) -> bool;
+extern fn gamepad_connected(slot: i64) -> bool = "gs_gfx_gamepad_connected";
+extern fn gamepad_changes() -> i64 = "gs_gfx_gamepad_changes";
+extern fn gamepad_type(slot: i64) -> i64 = "gs_gfx_gamepad_type";
+extern fn gamepad_axis(slot: i64, axis: i64) -> f32 = "gs_gfx_gamepad_axis";
+extern fn gamepad_down(slot: i64, button: i64) -> bool = "gs_gfx_gamepad_down";
+extern fn gamepad_pressed(slot: i64, button: i64) -> bool = "gs_gfx_gamepad_pressed";
+extern fn gamepad_released(slot: i64, button: i64) -> bool = "gs_gfx_gamepad_released";
+extern fn gamepad_rumble(slot: i64, low: f32, high: f32, ms: i64) -> bool = "gs_gfx_gamepad_rumble";
 fn mouse_pos() -> float2 {
     var p = float2_0;
     mouse_pos_into(p);
@@ -478,7 +478,7 @@ fn mouse_delta() -> float2 {
 // EVENT_FOCUS_GAINED / EVENT_FOCUS_LOST in events(), with no payload fields.
 // Held keys/buttons get released edges and up events before EVENT_FOCUS_LOST.
 // Headless, focus starts true and inject_focus can change it for tests.
-extern "gs_gfx_focused" fn focused() -> bool;
+extern fn focused() -> bool = "gs_gfx_focused";
 
 // First-person mouse look: hide the cursor, confine it to the window, and
 // keep mouse_delta() moving past the window edges. Use deltas, not mouse_pos,
@@ -487,38 +487,38 @@ extern "gs_gfx_focused" fn focused() -> bool;
 // a camera jump. Setting the current mode again leaves motion alone.
 // Focus gain does not recapture: call again when the player resumes.
 // Headless, these keep the same state without touching the system mouse.
-extern "gs_gfx_set_mouse_relative" fn set_mouse_relative(on: bool) -> bool;
-extern "gs_gfx_mouse_relative" fn mouse_relative() -> bool;
+extern fn set_mouse_relative(on: bool) -> bool = "gs_gfx_set_mouse_relative";
+extern fn mouse_relative() -> bool = "gs_gfx_mouse_relative";
 
 // Select a system cursor shape, for example set_cursor(CURSOR_POINTER).
 // False on failure, with details in error(). Visibility is unchanged.
 // Headless calls validate the shape without changing the desktop cursor.
 // close() restores the default cursor and frees cached shapes.
-extern "gs_gfx_set_cursor" fn set_cursor(shape: i64) -> bool;
+extern fn set_cursor(shape: i64) -> bool = "gs_gfx_set_cursor";
 
 // Visibility outside relative mode; useful when drawing your own cursor.
 // Relative mode always hides it, then restores this preference when disabled.
 // Focus loss resets the preference to visible. Hiding without focus fails.
 // cursor_visible reports the effective visibility within the gfx window;
 // headless it reports the simulated state. close() restores the system cursor.
-extern "gs_gfx_set_cursor_visible" fn set_cursor_visible(visible: bool) -> bool;
-extern "gs_gfx_cursor_visible" fn cursor_visible() -> bool;
+extern fn set_cursor_visible(visible: bool) -> bool = "gs_gfx_set_cursor_visible";
+extern fn cursor_visible() -> bool = "gs_gfx_cursor_visible";
 
 // Input as if from the keyboard or mouse, seen at the next frame(): what a
 // test drives a program with. The mouse goes to pixel x, y; a button of 0
 // only moves it.
-extern "gs_gfx_inject_key" fn inject_key(name: const u8[:], down: bool) -> bool;
-extern "gs_gfx_inject_mouse" fn inject_mouse(x: f32, y: f32, button: i64, down: bool);
+extern fn inject_key(name: const u8[:], down: bool) -> bool = "gs_gfx_inject_key";
+extern fn inject_mouse(x: f32, y: f32, button: i64, down: bool) = "gs_gfx_inject_mouse";
 // Text as if typed: an EVENT_TEXT per character at the next frame().
-extern "gs_gfx_inject_text" fn inject_text(text: const u8[:]) -> bool;
+extern fn inject_text(text: const u8[:]) -> bool = "gs_gfx_inject_text";
 // A focus change at the next frame(), in order with other injected input.
 // Does not move operating-system focus; intended for headless tests.
-extern "gs_gfx_inject_focus" fn inject_focus(focused: bool) -> bool;
+extern fn inject_focus(focused: bool) -> bool = "gs_gfx_inject_focus";
 
 // The last frame's input in the order it came, key repeats and typed text
 // included: what text editing needs, where the state above loses what
 // happened between two frames.
-extern "gs_gfx_events" fn events_into(out: Event[:]) -> i64;
+extern fn events_into(out: Event[:]) -> i64 = "gs_gfx_events";
 fn events() -> Event[>..] {
     var out: Event[>..] = [];
     let n = events_into(out);
@@ -528,11 +528,11 @@ fn events() -> Event[>..] {
 }
 // Typed text comes as EVENT_TEXT only while text input is on: off by
 // default, since on some platforms it shows an on-screen keyboard.
-extern "gs_gfx_text_input" fn text_input(on: bool);
+extern fn text_input(on: bool) = "gs_gfx_text_input";
 // The scancode of the key of that name, as key_down takes it, 0 for none;
 // and the name the platform has for a key, as a label to show.
-extern "gs_gfx_scancode" fn scancode(name: const u8[:]) -> i64;
-extern "gs_gfx_key_name" fn key_name_into(scancode: i64, out: u8[:]) -> i64;
+extern fn scancode(name: const u8[:]) -> i64 = "gs_gfx_scancode";
+extern fn key_name_into(scancode: i64, out: u8[:]) -> i64 = "gs_gfx_key_name";
 fn key_name(scancode: i64) -> u8[>..] {
     var name: u8[>..] = [];
     let n = key_name_into(scancode, name);
@@ -542,7 +542,7 @@ fn key_name(scancode: i64) -> u8[>..] {
 }
 
 // The system clipboard's text; headless, gfx's own.
-extern "gs_gfx_clipboard" fn clipboard_into(out: u8[:]) -> i64;
+extern fn clipboard_into(out: u8[:]) -> i64 = "gs_gfx_clipboard";
 fn clipboard() -> u8[>..] {
     var text: u8[>..] = [];
     let n = clipboard_into(text);
@@ -550,21 +550,21 @@ fn clipboard() -> u8[>..] {
     clipboard_into(text);
     return text;
 }
-extern "gs_gfx_set_clipboard" fn set_clipboard(text: const u8[:]) -> bool;
+extern fn set_clipboard(text: const u8[:]) -> bool = "gs_gfx_set_clipboard";
 
 // --- buffers -----------------------------------------------------------------
 
 // A buffer of `size` bytes, holding `data` and zeros after it. Data comes
 // from bytes_of: gfx::vertex_buffer(bytes_of(vertices)).
-extern "gs_gfx_create_buffer" fn buffer(usage: i64, size: i64, data: const u8[:]) -> Buffer;
+extern fn buffer(usage: i64, size: i64, data: const u8[:]) -> Buffer = "gs_gfx_create_buffer";
 fn buffer(usage: i64, data: const u8[:]) -> Buffer { buffer(usage, data.len, data) }
 fn vertex_buffer(data: const u8[:]) -> Buffer { buffer(BUFFER_VERTEX, data.len, data) }
 fn index_buffer(data: const u8[:]) -> Buffer { buffer(BUFFER_INDEX, data.len, data) }
-extern "gs_gfx_update_buffer" fn update_buffer(b: Buffer, offset: i64, data: const u8[:]) -> bool;
+extern fn update_buffer(b: Buffer, offset: i64, data: const u8[:]) -> bool = "gs_gfx_update_buffer";
 fn update_buffer(b: Buffer, data: const u8[:]) -> bool { update_buffer(b, 0, data) }
-extern "gs_gfx_read_buffer" fn read_buffer_into(b: Buffer, offset: i64, out: u8[:]) -> bool;
-extern "gs_gfx_buffer_size" fn buffer_size(b: Buffer) -> i64;
-extern "gs_gfx_release_buffer" fn release(b: Buffer);
+extern fn read_buffer_into(b: Buffer, offset: i64, out: u8[:]) -> bool = "gs_gfx_read_buffer";
+extern fn buffer_size(b: Buffer) -> i64 = "gs_gfx_buffer_size";
+extern fn release(b: Buffer) = "gs_gfx_release_buffer";
 
 // Reads back `out.len` bytes from `offset`, once the GPU has done
 // everything submitted before. Not inside a pass.
@@ -587,7 +587,7 @@ fn read_buffer<T>(b: Buffer, out: T[>..]&, count: i64) -> bool {
 
 // The extern fns taking a description by reference are wrapped by ones
 // taking it by value, which a struct literal can be passed to.
-extern "gs_gfx_create_texture" fn create_texture(desc: const TextureDesc&) -> Texture;
+extern fn create_texture(desc: const TextureDesc&) -> Texture = "gs_gfx_create_texture";
 fn texture(desc: TextureDesc) -> Texture { create_texture(desc) }
 fn texture2d(width: i64, height: i64, format: i32, usage: i32) -> Texture {
     texture(TextureDesc { format: format, usage: usage, width: width as i32,
@@ -616,17 +616,17 @@ fn texture_array(width: i64, height: i64, layers: i64, format: i32, usage: i32) 
 }
 // A PNG (or .bmp) as an RGBA8 texture, with its mips when flags has
 // LOAD_MIPS.
-extern "gs_gfx_load_texture" fn load_texture(path: const u8[:], flags: i64) -> Texture;
+extern fn load_texture(path: const u8[:], flags: i64) -> Texture = "gs_gfx_load_texture";
 
-extern "gs_gfx_update_texture" fn update_texture_region(t: Texture, region: const Region&,
-                                                        data: const u8[:]) -> bool;
+extern fn update_texture_region(t: Texture, region: const Region&,
+                                data: const u8[:]) -> bool = "gs_gfx_update_texture";
 fn update_texture(t: Texture, region: Region, data: const u8[:]) -> bool {
     update_texture_region(t, region, data)
 }
 // The whole of mip 0 of layer 0: a 2D texture, or all of a 3D one.
 fn update_texture(t: Texture, data: const u8[:]) -> bool { update_texture(t, Region {}, data) }
-extern "gs_gfx_read_texture" fn read_texture_into(t: Texture, region: const Region&,
-                                                  out: u8[:]) -> bool;
+extern fn read_texture_into(t: Texture, region: const Region&,
+                            out: u8[:]) -> bool = "gs_gfx_read_texture";
 fn read_texture(t: Texture, region: Region, out: u8[:]) -> bool {
     let ok = read_texture_into(t, region, out);
     check();
@@ -652,7 +652,7 @@ fn read_pixels(t: Texture) -> u8[>..] {
 }
 // An RGBA8 or BGRA8 texture's mip 0 as a PNG file; the screen as it is
 // shown, opaque.
-extern "gs_gfx_save_png" fn save_png_raw(t: Texture, path: const u8[:]) -> bool;
+extern fn save_png_raw(t: Texture, path: const u8[:]) -> bool = "gs_gfx_save_png";
 fn save_png(t: Texture, path: const u8[:]) -> bool {
     let ok = save_png_raw(t, path);
     check();
@@ -660,14 +660,14 @@ fn save_png(t: Texture, path: const u8[:]) -> bool {
 }
 fn screenshot(path: const u8[:]) -> bool { save_png(screen(), path) }
 // Fills mips 1 and up from mip 0. Not inside a pass.
-extern "gs_gfx_generate_mips" fn generate_mips(t: Texture);
-extern "gs_gfx_texture_info" fn texture_info_into(t: Texture, out: TextureDesc&) -> bool;
+extern fn generate_mips(t: Texture) = "gs_gfx_generate_mips";
+extern fn texture_info_into(t: Texture, out: TextureDesc&) -> bool = "gs_gfx_texture_info";
 fn texture_info(t: Texture) -> TextureDesc {
     var d = TextureDesc { width: 0, height: 0 };
     texture_info_into(t, d);
     d
 }
-extern "gs_gfx_release_texture" fn release(t: Texture);
+extern fn release(t: Texture) = "gs_gfx_release_texture";
 
 // The bytes one texel of `format` takes.
 fn texel_size(format: i32) -> i64 {
@@ -678,7 +678,7 @@ fn texel_size(format: i32) -> i64 {
     return 4;
 }
 
-extern "gs_gfx_create_sampler" fn create_sampler(desc: const SamplerDesc&) -> Sampler;
+extern fn create_sampler(desc: const SamplerDesc&) -> Sampler = "gs_gfx_create_sampler";
 fn sampler(desc: SamplerDesc) -> Sampler { create_sampler(desc) }
 fn sampler(filter: i32, wrap: i32) -> Sampler {
     sampler(SamplerDesc { min_filter: filter, mag_filter: filter, mip_filter: filter,
@@ -689,28 +689,28 @@ fn shadow_sampler() -> Sampler {
     sampler(SamplerDesc { wrap_u: CLAMP, wrap_v: CLAMP, wrap_w: CLAMP,
                           compare: COMPARE_LESS_EQUAL })
 }
-extern "gs_gfx_release_sampler" fn release(s: Sampler);
+extern fn release(s: Sampler) = "gs_gfx_release_sampler";
 
 // --- pipelines ---------------------------------------------------------------
 
 // vs and fs are embed_shader() results.
-extern "gs_gfx_create_pipeline" fn create_pipeline(vs: const u8[:], fs: const u8[:],
-                                                   desc: const PipelineDesc&) -> Pipeline;
+extern fn create_pipeline(vs: const u8[:], fs: const u8[:],
+                          desc: const PipelineDesc&) -> Pipeline = "gs_gfx_create_pipeline";
 fn pipeline(vs: const u8[:], fs: const u8[:], desc: PipelineDesc) -> Pipeline {
     create_pipeline(vs, fs, desc)
 }
 fn pipeline(vs: const u8[:], fs: const u8[:]) -> Pipeline { pipeline(vs, fs, PipelineDesc {}) }
-extern "gs_gfx_release_pipeline" fn release(p: Pipeline);
-extern "gs_gfx_create_compute_pipeline" fn compute_pipeline(cs: const u8[:]) -> ComputePipeline;
-extern "gs_gfx_release_compute_pipeline" fn release(p: ComputePipeline);
+extern fn release(p: Pipeline) = "gs_gfx_release_pipeline";
+extern fn compute_pipeline(cs: const u8[:]) -> ComputePipeline = "gs_gfx_create_compute_pipeline";
+extern fn release(p: ComputePipeline) = "gs_gfx_release_compute_pipeline";
 
 // --- render passes and drawing -------------------------------------------------
 
 // Draws go between begin_pass and end_pass, into the targets the pass
 // names; binds last until the pass ends.
-extern "gs_gfx_begin_pass" fn begin_pass_desc(desc: const PassDesc&) -> bool;
+extern fn begin_pass_desc(desc: const PassDesc&) -> bool = "gs_gfx_begin_pass";
 fn begin_pass(desc: PassDesc) -> bool { begin_pass_desc(desc) }
-extern "gs_gfx_end_pass" fn end_pass();
+extern fn end_pass() = "gs_gfx_end_pass";
 // Into one target, with a depth target or Texture { 0 }, cleared.
 fn begin_pass(target: Texture, depth: Texture, clear: float4) -> bool {
     var d = PassDesc { depth: depth, color_value: clear };
@@ -720,38 +720,38 @@ fn begin_pass(target: Texture, depth: Texture, clear: float4) -> bool {
 // Into the screen and its depth, cleared to `clear`.
 fn begin_screen(clear: float4) -> bool { begin_pass(screen(), screen_depth(), clear) }
 
-extern "gs_gfx_bind_pipeline" fn bind(p: Pipeline);
+extern fn bind(p: Pipeline) = "gs_gfx_bind_pipeline";
 // Vertex buffer 0 per vertex, 1 per instance (PipelineDesc.instance_location).
-extern "gs_gfx_bind_vertex_buffer" fn bind_vertex_buffer(slot: i64, b: Buffer, offset: i64);
+extern fn bind_vertex_buffer(slot: i64, b: Buffer, offset: i64) = "gs_gfx_bind_vertex_buffer";
 fn bind_vertex_buffer(b: Buffer) { bind_vertex_buffer(0, b, 0) }
 // Indices of index_size bytes: 2 for u16, 4 for u32.
-extern "gs_gfx_bind_index_buffer" fn bind_index_buffer(b: Buffer, index_size: i64, offset: i64);
+extern fn bind_index_buffer(b: Buffer, index_size: i64, offset: i64) = "gs_gfx_bind_index_buffer";
 fn bind_index_buffer(b: Buffer, index_size: i64) { bind_index_buffer(b, index_size, 0) }
 // A sampler binding of `stage`, in a render pass, or a compute pass for
 // COMPUTE.
-extern "gs_gfx_bind_texture" fn bind_texture(stage: i64, slot: i64, t: Texture, s: Sampler);
+extern fn bind_texture(stage: i64, slot: i64, t: Texture, s: Sampler) = "gs_gfx_bind_texture";
 // Read-only storage resources of `stage`. A compute shader's read-write
 // ones are given to begin_compute.
-extern "gs_gfx_bind_storage_texture" fn bind_storage_texture(stage: i64, slot: i64, t: Texture);
-extern "gs_gfx_bind_storage_buffer" fn bind_storage_buffer(stage: i64, slot: i64, b: Buffer);
+extern fn bind_storage_texture(stage: i64, slot: i64, t: Texture) = "gs_gfx_bind_storage_texture";
+extern fn bind_storage_buffer(stage: i64, slot: i64, b: Buffer) = "gs_gfx_bind_storage_buffer";
 // A uniform block's contents, for the draws or dispatches that follow, in
 // or out of a pass.
-extern "gs_gfx_push_uniforms" fn push_uniforms(stage: i64, slot: i64, data: const u8[:]);
+extern fn push_uniforms(stage: i64, slot: i64, data: const u8[:]) = "gs_gfx_push_uniforms";
 // Any flat struct as the contents of a uniform block.
 fn uniforms<T>(stage: i64, slot: i64, u: T) {
     let one: T[1] = [u];
     push_uniforms(stage, slot, bytes_of(one));
 }
-extern "gs_gfx_viewport" fn viewport(x: f32, y: f32, w: f32, h: f32);
+extern fn viewport(x: f32, y: f32, w: f32, h: f32) = "gs_gfx_viewport";
 // w == 0: the whole target.
-extern "gs_gfx_scissor" fn scissor(x: i64, y: i64, w: i64, h: i64);
+extern fn scissor(x: i64, y: i64, w: i64, h: i64) = "gs_gfx_scissor";
 
-extern "gs_gfx_draw" fn draw(vertices: i64, instances: i64, first_vertex: i64,
-                             first_instance: i64);
+extern fn draw(vertices: i64, instances: i64, first_vertex: i64,
+               first_instance: i64) = "gs_gfx_draw";
 fn draw(vertices: i64) { draw(vertices, 1, 0, 0) }
 fn draw_instanced(vertices: i64, instances: i64) { draw(vertices, instances, 0, 0) }
-extern "gs_gfx_draw_indexed" fn draw_indexed(indices: i64, instances: i64, first_index: i64,
-                                             vertex_offset: i64, first_instance: i64);
+extern fn draw_indexed(indices: i64, instances: i64, first_index: i64,
+                       vertex_offset: i64, first_instance: i64) = "gs_gfx_draw_indexed";
 fn draw_indexed(indices: i64) { draw_indexed(indices, 1, 0, 0, 0) }
 fn draw_indexed_instanced(indices: i64, instances: i64) { draw_indexed(indices, instances, 0, 0, 0) }
 
@@ -759,16 +759,16 @@ fn draw_indexed_instanced(indices: i64, instances: i64) { draw_indexed(indices, 
 
 // A compute pass writing these buffers and textures: the shader's
 // read-write storage resources, in binding order.
-extern "gs_gfx_begin_compute" fn begin_compute(rw_buffers: const Buffer[:],
-                                               rw_textures: const Texture[:]) -> bool;
+extern fn begin_compute(rw_buffers: const Buffer[:],
+                        rw_textures: const Texture[:]) -> bool = "gs_gfx_begin_compute";
 fn begin_compute(rw_buffers: const Buffer[:]) -> bool {
     let none: Texture[>..] = [];
     begin_compute(rw_buffers, none)
 }
-extern "gs_gfx_end_compute" fn end_compute();
-extern "gs_gfx_bind_compute_pipeline" fn bind(p: ComputePipeline);
+extern fn end_compute() = "gs_gfx_end_compute";
+extern fn bind(p: ComputePipeline) = "gs_gfx_bind_compute_pipeline";
 // Runs x * y * z workgroups of the shader's local size.
-extern "gs_gfx_dispatch" fn dispatch(x: i64, y: i64, z: i64);
+extern fn dispatch(x: i64, y: i64, z: i64) = "gs_gfx_dispatch";
 
 // --- matrices ------------------------------------------------------------------
 

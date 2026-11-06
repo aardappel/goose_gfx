@@ -665,9 +665,9 @@ struct Style {
 
 // Whether the ui layer is linked in. A compiler without it refuses to run a
 // ui program in-process, so this is true wherever it runs.
-extern "gs_ui_available" fn available() -> bool;
-extern "gs_ui_error" fn error_into(out: u8[:]) -> i64;
-extern "gs_ui_misuse_count" fn misuse_count() -> i64;
+extern fn available() -> bool = "gs_ui_available";
+extern fn error_into(out: u8[:]) -> i64 = "gs_ui_error";
+extern fn misuse_count() -> i64 = "gs_ui_misuse_count";
 // Why the last call that failed did, as text.
 fn error() -> u8[>..] {
     var text: u8[>..] = [];
@@ -686,19 +686,19 @@ fn check() {
 // Fonts are baked into an atlas, one image holding the glyphs of all its
 // fonts: made, fonts added, baked, and then usable by any context. render()
 // uploads a baked atlas's image to the GPU when it first draws with it.
-extern "gs_ui_create_font_atlas" fn create_font_atlas() -> FontAtlas;
+extern fn create_font_atlas() -> FontAtlas = "gs_ui_create_font_atlas";
 // Destroys the atlas and its fonts; not while a context uses them, or
 // draws its shapes with the atlas (create_context, style_set_font).
-extern "gs_ui_destroy_font_atlas" fn destroy(a: FontAtlas);
-extern "gs_ui_font_atlas_is_valid" fn is_valid(a: FontAtlas) -> bool;
+extern fn destroy(a: FontAtlas) = "gs_ui_destroy_font_atlas";
+extern fn is_valid(a: FontAtlas) -> bool = "gs_ui_font_atlas_is_valid";
 // Nuklear's own FontConfig defaults, which the field defaults repeat.
-extern "gs_ui_default_font_config" fn default_font_config() -> FontConfig;
+extern fn default_font_config() -> FontConfig = "gs_ui_default_font_config";
 // Nuklear's built-in font, ProggyClean, `height` pixels high. Given
 // `ranges`, pairs of first and last character, it has those characters in
 // place of config.ranges.
-extern "gs_ui_add_default_font" fn add_default_font(a: FontAtlas, height: f32,
-                                                    config: FontConfig,
-                                                    ranges: const u32[:]) -> Font;
+extern fn add_default_font(a: FontAtlas, height: f32,
+                           config: FontConfig,
+                           ranges: const u32[:]) -> Font = "gs_ui_add_default_font";
 fn add_default_font(a: FontAtlas, height: f32, config: FontConfig) -> Font {
     let none: u32[>..] = [];
     add_default_font(a, height, config, none)
@@ -707,10 +707,10 @@ fn add_default_font(a: FontAtlas, height: f32) -> Font {
     add_default_font(a, height, FontConfig {})
 }
 // A TrueType or OpenType font from its bytes (read_file gives them).
-extern "gs_ui_add_font_from_memory" fn add_font_from_memory(a: FontAtlas, ttf: const u8[:],
-                                                            height: f32,
-                                                            config: FontConfig,
-                                                            ranges: const u32[:]) -> Font;
+extern fn add_font_from_memory(a: FontAtlas, ttf: const u8[:],
+                               height: f32,
+                               config: FontConfig,
+                               ranges: const u32[:]) -> Font = "gs_ui_add_font_from_memory";
 fn add_font_from_memory(a: FontAtlas, ttf: const u8[:], height: f32, config: FontConfig) -> Font {
     let none: u32[>..] = [];
     add_font_from_memory(a, ttf, height, config, none)
@@ -719,9 +719,9 @@ fn add_font_from_memory(a: FontAtlas, ttf: const u8[:], height: f32) -> Font {
     add_font_from_memory(a, ttf, height, FontConfig {})
 }
 // A font file, or a zero handle with error() set.
-extern "gs_ui_add_font_from_file" fn add_font_from_file(a: FontAtlas, path: const u8[:],
-                                                        height: f32, config: FontConfig,
-                                                        ranges: const u32[:]) -> Font;
+extern fn add_font_from_file(a: FontAtlas, path: const u8[:],
+                             height: f32, config: FontConfig,
+                             ranges: const u32[:]) -> Font = "gs_ui_add_font_from_file";
 fn add_font_from_file(a: FontAtlas, path: const u8[:], height: f32, config: FontConfig) -> Font {
     let none: u32[>..] = [];
     add_font_from_file(a, path, height, config, none)
@@ -734,17 +734,17 @@ fn add_font_from_file(a: FontAtlas, path: const u8[:], height: f32) -> Font {
 // while the fonts measure at their own: sharp text for a ui drawn with
 // set_scale at the same scale. Baked again at another scale, the fonts
 // keep their handles, and contexts drawing with them draw at the new one.
-extern "gs_ui_bake_font_atlas" fn bake(a: FontAtlas, scale: f32) -> bool;
+extern fn bake(a: FontAtlas, scale: f32) -> bool = "gs_ui_bake_font_atlas";
 fn bake(a: FontAtlas) -> bool { bake(a, 1.0) }
-extern "gs_ui_font_atlas_is_baked" fn is_baked(a: FontAtlas) -> bool;
+extern fn is_baked(a: FontAtlas) -> bool = "gs_ui_font_atlas_is_baked";
 // The baked image: RGBA, width x height.
-extern "gs_ui_font_atlas_size" fn atlas_size_into(a: FontAtlas, out: int2&);
+extern fn atlas_size_into(a: FontAtlas, out: int2&) = "gs_ui_font_atlas_size";
 fn atlas_size(a: FontAtlas) -> int2 {
     var size = int2_0;
     atlas_size_into(a, size);
     size
 }
-extern "gs_ui_font_atlas_pixels" fn atlas_pixels_into(a: FontAtlas, out: u8[:]) -> i64;
+extern fn atlas_pixels_into(a: FontAtlas, out: u8[:]) -> i64 = "gs_ui_font_atlas_pixels";
 fn atlas_pixels(a: FontAtlas) -> u8[>..] {
     var px: u8[>..] = [];
     let n = atlas_pixels_into(a, px);
@@ -754,14 +754,14 @@ fn atlas_pixels(a: FontAtlas) -> u8[>..] {
 }
 // The texture a renderer uploaded the image to, which the atlas's text is
 // drawn with; 0 for none yet.
-extern "gs_ui_set_font_atlas_texture" fn set_texture(a: FontAtlas, texture: u32);
-extern "gs_ui_font_atlas_texture" fn texture(a: FontAtlas) -> u32;
+extern fn set_texture(a: FontAtlas, texture: u32) = "gs_ui_set_font_atlas_texture";
+extern fn texture(a: FontAtlas) -> u32 = "gs_ui_font_atlas_texture";
 // A baked atlas without a texture, or a zero handle: what a renderer has
 // yet to upload.
-extern "gs_ui_font_atlas_without_texture" fn atlas_without_texture() -> FontAtlas;
+extern fn atlas_without_texture() -> FontAtlas = "gs_ui_font_atlas_without_texture";
 // Forgets every atlas's texture, for a renderer whose textures are gone.
-extern "gs_ui_forget_font_atlas_textures" fn forget_textures();
-extern "gs_ui_released_textures" fn released_textures_into(out: u32[:]) -> i64;
+extern fn forget_textures() = "gs_ui_forget_font_atlas_textures";
+extern fn released_textures_into(out: u32[:]) -> i64 = "gs_ui_released_textures";
 // The textures of the atlases destroyed since the last call, for the
 // renderer that made them to release.
 fn released_textures() -> u32[>..] {
@@ -771,7 +771,7 @@ fn released_textures() -> u32[>..] {
     released_textures_into(out);
     return out;
 }
-extern "gs_ui_font_atlas_fonts" fn fonts_into(a: FontAtlas, out: Font[:]) -> i64;
+extern fn fonts_into(a: FontAtlas, out: Font[:]) -> i64 = "gs_ui_font_atlas_fonts";
 // The atlas's fonts, in the order added.
 fn fonts(a: FontAtlas) -> Font[>..] {
     var out: Font[>..] = [];
@@ -780,12 +780,12 @@ fn fonts(a: FontAtlas) -> Font[>..] {
     fonts_into(a, out);
     return out;
 }
-extern "gs_ui_font_atlas_of" fn atlas(f: Font) -> FontAtlas;
-extern "gs_ui_font_is_valid" fn is_valid(f: Font) -> bool;
+extern fn atlas(f: Font) -> FontAtlas = "gs_ui_font_atlas_of";
+extern fn is_valid(f: Font) -> bool = "gs_ui_font_is_valid";
 // Metrics at the size the font was baked, once it is.
-extern "gs_ui_font_info_of" fn info(f: Font) -> FontInfo;
-extern "gs_ui_font_find_glyph" fn find_glyph_into(f: Font, codepoint: u32,
-                                                  out: FontGlyph&) -> bool;
+extern fn info(f: Font) -> FontInfo = "gs_ui_font_info_of";
+extern fn find_glyph_into(f: Font, codepoint: u32,
+                          out: FontGlyph&) -> bool = "gs_ui_font_find_glyph";
 // The glyph drawn for a character, and whether it is the character's own
 // rather than the fallback.
 fn find_glyph(f: Font, codepoint: u32) -> FontGlyph, bool {
@@ -794,8 +794,8 @@ fn find_glyph(f: Font, codepoint: u32) -> FontGlyph, bool {
     return g, own;
 }
 // How wide `text` is drawn in this font, in pixels.
-extern "gs_ui_font_text_width" fn text_width(f: Font, text: const u8[:]) -> f32;
-extern "gs_ui_font_glyph_ranges" fn glyph_ranges_into(which: i64, out: u32[:]) -> i64;
+extern fn text_width(f: Font, text: const u8[:]) -> f32 = "gs_ui_font_text_width";
+extern fn glyph_ranges_into(which: i64, out: u32[:]) -> i64 = "gs_ui_font_glyph_ranges";
 // The characters of a RANGE_* set, as pairs of first and last.
 fn glyph_ranges(which: i64) -> u32[>..] {
     var out: u32[>..] = [];
@@ -809,11 +809,11 @@ fn glyph_ranges(which: i64) -> u32[>..] {
 
 // A context drawing with `font`, from a baked atlas; its windows and their
 // state live in it.
-extern "gs_ui_create_context" fn create_context(font: Font) -> Context;
+extern fn create_context(font: Font) -> Context = "gs_ui_create_context";
 // A context drawing with Nuklear's built-in font at `font_height` (13 is
 // its native size), in an atlas made for it and destroyed with it; given a
 // scale, drawn at it (set_scale).
-extern "gs_ui_create_default_context" fn create(font_height: f32) -> Context;
+extern fn create(font_height: f32) -> Context = "gs_ui_create_default_context";
 fn create(font_height: f32, scale: f32) -> Context {
     let c = create(font_height);
     set_scale(c, scale);
@@ -822,32 +822,32 @@ fn create(font_height: f32, scale: f32) -> Context {
 // The same with a TrueType or OpenType font, from a file or from its bytes,
 // baked again at each scale like any, where Nuklear's built-in font, a
 // bitmap one, only scales well by whole numbers.
-extern "gs_ui_create_context_from_file" fn create_from_file(path: const u8[:],
-                                                            font_height: f32) -> Context;
-extern "gs_ui_create_context_from_memory" fn create_from_memory(ttf: const u8[:],
-                                                                font_height: f32) -> Context;
+extern fn create_from_file(path: const u8[:],
+                           font_height: f32) -> Context = "gs_ui_create_context_from_file";
+extern fn create_from_memory(ttf: const u8[:],
+                             font_height: f32) -> Context = "gs_ui_create_context_from_memory";
 // The atlas whose white texel draws the context's shapes: the one it was
 // made with, or that of the font style_set_font last gave a context made
 // on a font of the program's.
-extern "gs_ui_context_atlas" fn context_atlas(c: Context) -> FontAtlas;
-extern "gs_ui_destroy_context" fn destroy_raw(c: Context);
+extern fn context_atlas(c: Context) -> FontAtlas = "gs_ui_context_atlas";
+extern fn destroy_raw(c: Context) = "gs_ui_destroy_context";
 fn destroy(c: Context) {
     check();
     destroy_raw(c);
 }
-extern "gs_ui_context_is_valid" fn is_valid(c: Context) -> bool;
+extern fn is_valid(c: Context) -> bool = "gs_ui_context_is_valid";
 // Ends a frame: drops what it drew, and the windows not begun in it.
 // input_begin does it too, for a frame that drew anything.
-extern "gs_ui_clear" fn clear(c: Context);
+extern fn clear(c: Context) = "gs_ui_clear";
 // The seconds the frame took, which hides scroll bars and times tooltips;
 // input_from_gfx sets it.
-extern "gs_ui_set_delta_time" fn set_delta_time(c: Context, seconds: f32);
-extern "gs_ui_delta_time" fn delta_time(c: Context) -> f32;
+extern fn set_delta_time(c: Context, seconds: f32) = "gs_ui_set_delta_time";
+extern fn delta_time(c: Context) -> f32 = "gs_ui_delta_time";
 // The font the context draws with now.
-extern "gs_ui_context_font" fn font(c: Context) -> Font;
+extern fn font(c: Context) -> Font = "gs_ui_context_font";
 // Text edits paste this, on KEY_PASTE with EDIT_CLIPBOARD.
-extern "gs_ui_set_clipboard" fn set_clipboard(c: Context, text: const u8[:]);
-extern "gs_ui_copied" fn copied_into(c: Context, out: u8[:]) -> i64;
+extern fn set_clipboard(c: Context, text: const u8[:]) = "gs_ui_set_clipboard";
+extern fn copied_into(c: Context, out: u8[:]) -> i64 = "gs_ui_copied";
 // What a text edit copied or cut since the last call, and whether there
 // was any: for the program to put on the system clipboard.
 fn copied(c: Context) -> u8[>..], bool {
@@ -861,34 +861,34 @@ fn copied(c: Context) -> u8[>..], bool {
     return text, true;
 }
 // The texture shapes are drawn with: the one holding its atlas's image.
-extern "gs_ui_null_texture" fn null_texture(c: Context) -> u32;
+extern fn null_texture(c: Context) -> u32 = "gs_ui_null_texture";
 // The whole ui `scale` times bigger: laid out as before, in units of the
 // ui's own (window rectangles, rows, the font's size), and drawn with that
 // many pixels to each, which convert() and render() produce and input
 // comes in. A context made by create() or create_from_* has its font baked
 // again at the scale; another's text is as sharp as its atlas was baked
 // (bake(atlas, scale)). Not during a frame; 1 at first.
-extern "gs_ui_set_scale" fn set_scale(c: Context, scale: f32) -> bool;
-extern "gs_ui_scale" fn scale(c: Context) -> f32;
+extern fn set_scale(c: Context, scale: f32) -> bool = "gs_ui_set_scale";
+extern fn scale(c: Context) -> f32 = "gs_ui_scale";
 
 // --- input -------------------------------------------------------------------
 
 // A frame's input goes between input_begin and input_end, before any
 // window; input_from_gfx below does it all from gfx's. Positions are
 // pixels, which the ui divides by its scale.
-extern "gs_ui_input_begin" fn input_begin_raw(c: Context);
+extern fn input_begin_raw(c: Context) = "gs_ui_input_begin";
 fn input_begin(c: Context) {
     input_begin_raw(c);
     check();
 }
-extern "gs_ui_input_motion" fn input_motion(c: Context, x: i64, y: i64);
-extern "gs_ui_input_key" fn input_key(c: Context, key: i64, down: bool);
-extern "gs_ui_input_button" fn input_button(c: Context, button: i64, x: i64, y: i64, down: bool);
-extern "gs_ui_input_scroll" fn input_scroll(c: Context, amount: float2);
-extern "gs_ui_input_char" fn input_char(c: Context, ch: u8);
-extern "gs_ui_input_glyph" fn input_glyph(c: Context, utf8: const u8[:]);
-extern "gs_ui_input_unicode" fn input_unicode(c: Context, rune: u32);
-extern "gs_ui_input_end" fn input_end(c: Context);
+extern fn input_motion(c: Context, x: i64, y: i64) = "gs_ui_input_motion";
+extern fn input_key(c: Context, key: i64, down: bool) = "gs_ui_input_key";
+extern fn input_button(c: Context, button: i64, x: i64, y: i64, down: bool) = "gs_ui_input_button";
+extern fn input_scroll(c: Context, amount: float2) = "gs_ui_input_scroll";
+extern fn input_char(c: Context, ch: u8) = "gs_ui_input_char";
+extern fn input_glyph(c: Context, utf8: const u8[:]) = "gs_ui_input_glyph";
+extern fn input_unicode(c: Context, rune: u32) = "gs_ui_input_unicode";
+extern fn input_end(c: Context) = "gs_ui_input_end";
 // Typed text, a character at a time.
 fn input_text(c: Context, text: const u8[:]) {
     each_utf8(text) { input_unicode(c, it as u32); };
@@ -899,54 +899,54 @@ fn input_text(c: Context, text: const u8[:]) {
 // queries look at where the button's last click was, whenever that was,
 // and the is_ ones at a click this frame; has_mouse_click is a release
 // this frame.
-extern "gs_ui_input_mouse" fn input_mouse(c: Context) -> Mouse;
-extern "gs_ui_input_has_mouse_click" fn input_has_mouse_click(c: Context, button: i64) -> bool;
-extern "gs_ui_input_has_mouse_click_in_rect" fn input_has_mouse_click_in_rect(c: Context,
-                                                                              button: i64,
-                                                                              r: Rect) -> bool;
-extern "gs_ui_input_has_mouse_click_in_button_rect" fn input_has_mouse_click_in_button_rect(
-    c: Context, button: i64, r: Rect) -> bool;
-extern "gs_ui_input_has_mouse_click_down_in_rect" fn input_has_mouse_click_down_in_rect(
-    c: Context, button: i64, r: Rect, down: bool) -> bool;
-extern "gs_ui_input_is_mouse_click_in_rect" fn input_is_mouse_click_in_rect(c: Context,
-                                                                            button: i64,
-                                                                            r: Rect) -> bool;
-extern "gs_ui_input_is_mouse_click_down_in_rect" fn input_is_mouse_click_down_in_rect(
-    c: Context, button: i64, r: Rect, down: bool) -> bool;
-extern "gs_ui_input_any_mouse_click_in_rect" fn input_any_mouse_click_in_rect(c: Context,
-                                                                              r: Rect) -> bool;
-extern "gs_ui_input_is_mouse_prev_hovering_rect" fn input_is_mouse_prev_hovering_rect(
-    c: Context, r: Rect) -> bool;
-extern "gs_ui_input_is_mouse_hovering_rect" fn input_is_mouse_hovering_rect(c: Context,
-                                                                            r: Rect) -> bool;
-extern "gs_ui_input_is_mouse_hovering_still_rect" fn input_is_mouse_hovering_still_rect(
-    c: Context, r: Rect) -> bool;
+extern fn input_mouse(c: Context) -> Mouse = "gs_ui_input_mouse";
+extern fn input_has_mouse_click(c: Context, button: i64) -> bool = "gs_ui_input_has_mouse_click";
+extern fn input_has_mouse_click_in_rect(c: Context,
+                                        button: i64,
+                                        r: Rect) -> bool = "gs_ui_input_has_mouse_click_in_rect";
+extern fn input_has_mouse_click_in_button_rect(
+    c: Context, button: i64, r: Rect) -> bool = "gs_ui_input_has_mouse_click_in_button_rect";
+extern fn input_has_mouse_click_down_in_rect(
+    c: Context, button: i64, r: Rect, down: bool) -> bool = "gs_ui_input_has_mouse_click_down_in_rect";
+extern fn input_is_mouse_click_in_rect(c: Context,
+                                       button: i64,
+                                       r: Rect) -> bool = "gs_ui_input_is_mouse_click_in_rect";
+extern fn input_is_mouse_click_down_in_rect(
+    c: Context, button: i64, r: Rect, down: bool) -> bool = "gs_ui_input_is_mouse_click_down_in_rect";
+extern fn input_any_mouse_click_in_rect(c: Context,
+                                        r: Rect) -> bool = "gs_ui_input_any_mouse_click_in_rect";
+extern fn input_is_mouse_prev_hovering_rect(
+    c: Context, r: Rect) -> bool = "gs_ui_input_is_mouse_prev_hovering_rect";
+extern fn input_is_mouse_hovering_rect(c: Context,
+                                       r: Rect) -> bool = "gs_ui_input_is_mouse_hovering_rect";
+extern fn input_is_mouse_hovering_still_rect(
+    c: Context, r: Rect) -> bool = "gs_ui_input_is_mouse_hovering_still_rect";
 // Whether the mouse has hovered `r` for `delay` seconds, counting in
 // `timer`, which the program keeps from frame to frame; the _still ones
 // only while it does not move, the _clicked one not after `clicked`.
-extern "gs_ui_input_is_mouse_hovering_delay_rect" fn input_is_mouse_hovering_delay_rect(
-    c: Context, r: Rect, timer: f32&, delay: f32) -> bool;
-extern "gs_ui_input_is_mouse_hovering_still_delay_rect" fn input_is_mouse_hovering_still_delay_rect(
-    c: Context, r: Rect, timer: f32&, delay: f32) -> bool;
-extern "gs_ui_input_is_mouse_hovering_still_delay_clicked_rect" fn input_is_mouse_hovering_still_delay_clicked_rect(
-    c: Context, r: Rect, timer: f32&, delay: f32, clicked: bool&) -> bool;
-extern "gs_ui_input_is_mouse_moved" fn input_is_mouse_moved(c: Context) -> bool;
-extern "gs_ui_input_mouse_clicked" fn input_mouse_clicked(c: Context, button: i64,
-                                                          r: Rect) -> bool;
-extern "gs_ui_input_is_mouse_down" fn input_is_mouse_down(c: Context, button: i64) -> bool;
-extern "gs_ui_input_is_mouse_pressed" fn input_is_mouse_pressed(c: Context, button: i64) -> bool;
-extern "gs_ui_input_is_mouse_released" fn input_is_mouse_released(c: Context, button: i64) -> bool;
-extern "gs_ui_input_is_key_pressed" fn input_is_key_pressed(c: Context, key: i64) -> bool;
-extern "gs_ui_input_is_key_released" fn input_is_key_released(c: Context, key: i64) -> bool;
-extern "gs_ui_input_is_key_down" fn input_is_key_down(c: Context, key: i64) -> bool;
+extern fn input_is_mouse_hovering_delay_rect(
+    c: Context, r: Rect, timer: f32&, delay: f32) -> bool = "gs_ui_input_is_mouse_hovering_delay_rect";
+extern fn input_is_mouse_hovering_still_delay_rect(
+    c: Context, r: Rect, timer: f32&, delay: f32) -> bool = "gs_ui_input_is_mouse_hovering_still_delay_rect";
+extern fn input_is_mouse_hovering_still_delay_clicked_rect(
+    c: Context, r: Rect, timer: f32&, delay: f32, clicked: bool&) -> bool = "gs_ui_input_is_mouse_hovering_still_delay_clicked_rect";
+extern fn input_is_mouse_moved(c: Context) -> bool = "gs_ui_input_is_mouse_moved";
+extern fn input_mouse_clicked(c: Context, button: i64,
+                              r: Rect) -> bool = "gs_ui_input_mouse_clicked";
+extern fn input_is_mouse_down(c: Context, button: i64) -> bool = "gs_ui_input_is_mouse_down";
+extern fn input_is_mouse_pressed(c: Context, button: i64) -> bool = "gs_ui_input_is_mouse_pressed";
+extern fn input_is_mouse_released(c: Context, button: i64) -> bool = "gs_ui_input_is_mouse_released";
+extern fn input_is_key_pressed(c: Context, key: i64) -> bool = "gs_ui_input_is_key_pressed";
+extern fn input_is_key_released(c: Context, key: i64) -> bool = "gs_ui_input_is_key_released";
+extern fn input_is_key_down(c: Context, key: i64) -> bool = "gs_ui_input_is_key_down";
 
 // --- what was drawn ----------------------------------------------------------
 
 // The frame's command list, once its windows have ended: what a renderer
 // of its own draws, and what tests look at.
-extern "gs_ui_commands" fn commands_into(c: Context, out: Command[:]) -> i64;
-extern "gs_ui_command_points" fn command_points_into(c: Context, out: int2[:]) -> i64;
-extern "gs_ui_command_text" fn command_text_into(c: Context, out: u8[:]) -> i64;
+extern fn commands_into(c: Context, out: Command[:]) -> i64 = "gs_ui_commands";
+extern fn command_points_into(c: Context, out: int2[:]) -> i64 = "gs_ui_command_points";
+extern fn command_text_into(c: Context, out: u8[:]) -> i64 = "gs_ui_command_text";
 fn commands(c: Context) -> Command[>..] {
     var out: Command[>..] = [];
     let n = commands_into(c, out);
@@ -975,15 +975,15 @@ fn command_text(c: Context) -> u8[>..] {
 // The frame as triangles, for a renderer: convert, then vertices, indices
 // and draw_commands, which stay until the next convert or clear. Returns a
 // CONVERT_* result.
-extern "gs_ui_convert" fn convert_raw(c: Context, config: const ConvertConfig&) -> i64;
+extern fn convert_raw(c: Context, config: const ConvertConfig&) -> i64 = "gs_ui_convert";
 fn convert(c: Context, config: ConvertConfig) -> i64 {
     let r = convert_raw(c, config);
     check();
     r
 }
-extern "gs_ui_vertices" fn vertices_into(c: Context, out: Vertex[:]) -> i64;
-extern "gs_ui_indices" fn indices_into(c: Context, out: u32[:]) -> i64;
-extern "gs_ui_draw_commands" fn draw_commands_into(c: Context, out: DrawCommand[:]) -> i64;
+extern fn vertices_into(c: Context, out: Vertex[:]) -> i64 = "gs_ui_vertices";
+extern fn indices_into(c: Context, out: u32[:]) -> i64 = "gs_ui_indices";
+extern fn draw_commands_into(c: Context, out: DrawCommand[:]) -> i64 = "gs_ui_draw_commands";
 fn vertices(c: Context) -> Vertex[>..] {
     var out: Vertex[>..] = [];
     let n = vertices_into(c, out);
@@ -1010,137 +1010,137 @@ fn draw_commands(c: Context) -> DrawCommand[>..] {
 
 // A window, named by its title: true when it is open to fill with widgets.
 // end() follows either way.
-extern "gs_ui_begin" fn begin(c: Context, title: const u8[:], bounds: Rect, flags: i64) -> bool;
+extern fn begin(c: Context, title: const u8[:], bounds: Rect, flags: i64) -> bool = "gs_ui_begin";
 // A window named `name`, showing `title`, so the title can change.
-extern "gs_ui_begin_titled" fn begin_titled(c: Context, name: const u8[:], title: const u8[:],
-                                            bounds: Rect, flags: i64) -> bool;
-extern "gs_ui_end" fn end(c: Context);
+extern fn begin_titled(c: Context, name: const u8[:], title: const u8[:],
+                       bounds: Rect, flags: i64) -> bool = "gs_ui_begin_titled";
+extern fn end(c: Context) = "gs_ui_end";
 // Whether a window of that name exists.
-extern "gs_ui_window_find" fn window_find(c: Context, name: const u8[:]) -> bool;
+extern fn window_find(c: Context, name: const u8[:]) -> bool = "gs_ui_window_find";
 // The window being built.
-extern "gs_ui_window_get_bounds" fn window_get_bounds(c: Context) -> Rect;
-extern "gs_ui_window_get_position" fn window_get_position(c: Context) -> float2;
-extern "gs_ui_window_get_size" fn window_get_size(c: Context) -> float2;
-extern "gs_ui_window_get_width" fn window_get_width(c: Context) -> f32;
-extern "gs_ui_window_get_height" fn window_get_height(c: Context) -> f32;
+extern fn window_get_bounds(c: Context) -> Rect = "gs_ui_window_get_bounds";
+extern fn window_get_position(c: Context) -> float2 = "gs_ui_window_get_position";
+extern fn window_get_size(c: Context) -> float2 = "gs_ui_window_get_size";
+extern fn window_get_width(c: Context) -> f32 = "gs_ui_window_get_width";
+extern fn window_get_height(c: Context) -> f32 = "gs_ui_window_get_height";
 // The area widgets go in: the window less its title, border and scroll bars.
-extern "gs_ui_window_get_content_region" fn window_get_content_region(c: Context) -> Rect;
-extern "gs_ui_window_get_content_region_min" fn window_get_content_region_min(c: Context) -> float2;
-extern "gs_ui_window_get_content_region_max" fn window_get_content_region_max(c: Context) -> float2;
-extern "gs_ui_window_get_content_region_size" fn window_get_content_region_size(
-    c: Context) -> float2;
-extern "gs_ui_window_get_scroll" fn window_get_scroll(c: Context) -> Scroll;
-extern "gs_ui_window_has_focus" fn window_has_focus(c: Context) -> bool;
-extern "gs_ui_window_is_hovered" fn window_is_hovered(c: Context) -> bool;
+extern fn window_get_content_region(c: Context) -> Rect = "gs_ui_window_get_content_region";
+extern fn window_get_content_region_min(c: Context) -> float2 = "gs_ui_window_get_content_region_min";
+extern fn window_get_content_region_max(c: Context) -> float2 = "gs_ui_window_get_content_region_max";
+extern fn window_get_content_region_size(
+    c: Context) -> float2 = "gs_ui_window_get_content_region_size";
+extern fn window_get_scroll(c: Context) -> Scroll = "gs_ui_window_get_scroll";
+extern fn window_has_focus(c: Context) -> bool = "gs_ui_window_has_focus";
+extern fn window_is_hovered(c: Context) -> bool = "gs_ui_window_is_hovered";
 // Windows by name.
-extern "gs_ui_window_is_collapsed" fn window_is_collapsed(c: Context, name: const u8[:]) -> bool;
-extern "gs_ui_window_is_closed" fn window_is_closed(c: Context, name: const u8[:]) -> bool;
-extern "gs_ui_window_is_hidden" fn window_is_hidden(c: Context, name: const u8[:]) -> bool;
-extern "gs_ui_window_is_active" fn window_is_active(c: Context, name: const u8[:]) -> bool;
+extern fn window_is_collapsed(c: Context, name: const u8[:]) -> bool = "gs_ui_window_is_collapsed";
+extern fn window_is_closed(c: Context, name: const u8[:]) -> bool = "gs_ui_window_is_closed";
+extern fn window_is_hidden(c: Context, name: const u8[:]) -> bool = "gs_ui_window_is_hidden";
+extern fn window_is_active(c: Context, name: const u8[:]) -> bool = "gs_ui_window_is_active";
 // Whether the mouse is over any window.
-extern "gs_ui_window_is_any_hovered" fn window_is_any_hovered(c: Context) -> bool;
+extern fn window_is_any_hovered(c: Context) -> bool = "gs_ui_window_is_any_hovered";
 // That, or a widget is being used (Nuklear's): true over a window whether
 // or not the keys are the ui's.
-extern "gs_ui_item_is_any_active" fn item_is_any_active(c: Context) -> bool;
+extern fn item_is_any_active(c: Context) -> bool = "gs_ui_item_is_any_active";
 // Whether input is the ui's rather than the program's. The keys are while
 // a text field, or a property being typed into, has the keyboard in a
 // window that takes input: a field has it from the click that focuses it
 // until a click outside it, edit_unfocus, or its window closing or being
 // left out of a frame, and a window takes none while hidden, behind
 // another or under its own popup.
-extern "gs_ui_wants_keyboard" fn wants_keyboard(c: Context) -> bool;
+extern fn wants_keyboard(c: Context) -> bool = "gs_ui_wants_keyboard";
 // The mouse is over a window or a popup, or holds a button that went down
 // over one; a button that went down elsewhere keeps it the program's until
 // released. Windows and popups begun with WINDOW_NO_INPUT do not count.
-extern "gs_ui_wants_mouse" fn wants_mouse(c: Context) -> bool;
-extern "gs_ui_window_set_bounds" fn window_set_bounds(c: Context, name: const u8[:], bounds: Rect);
-extern "gs_ui_window_set_position" fn window_set_position(c: Context, name: const u8[:],
-                                                          pos: float2);
-extern "gs_ui_window_set_size" fn window_set_size(c: Context, name: const u8[:], size: float2);
-extern "gs_ui_window_set_focus" fn window_set_focus(c: Context, name: const u8[:]);
-extern "gs_ui_window_set_scroll" fn window_set_scroll(c: Context, x: i64, y: i64);
-extern "gs_ui_window_close" fn window_close(c: Context, name: const u8[:]);
+extern fn wants_mouse(c: Context) -> bool = "gs_ui_wants_mouse";
+extern fn window_set_bounds(c: Context, name: const u8[:], bounds: Rect) = "gs_ui_window_set_bounds";
+extern fn window_set_position(c: Context, name: const u8[:],
+                              pos: float2) = "gs_ui_window_set_position";
+extern fn window_set_size(c: Context, name: const u8[:], size: float2) = "gs_ui_window_set_size";
+extern fn window_set_focus(c: Context, name: const u8[:]) = "gs_ui_window_set_focus";
+extern fn window_set_scroll(c: Context, x: i64, y: i64) = "gs_ui_window_set_scroll";
+extern fn window_close(c: Context, name: const u8[:]) = "gs_ui_window_close";
 // MINIMIZED or MAXIMIZED.
-extern "gs_ui_window_collapse" fn window_collapse(c: Context, name: const u8[:], state: i64);
-extern "gs_ui_window_collapse_if" fn window_collapse_if(c: Context, name: const u8[:], state: i64,
-                                                        cond: bool);
+extern fn window_collapse(c: Context, name: const u8[:], state: i64) = "gs_ui_window_collapse";
+extern fn window_collapse_if(c: Context, name: const u8[:], state: i64,
+                             cond: bool) = "gs_ui_window_collapse_if";
 // HIDDEN or SHOWN.
-extern "gs_ui_window_show" fn window_show(c: Context, name: const u8[:], state: i64);
-extern "gs_ui_window_show_if" fn window_show_if(c: Context, name: const u8[:], state: i64,
-                                                cond: bool);
+extern fn window_show(c: Context, name: const u8[:], state: i64) = "gs_ui_window_show";
+extern fn window_show_if(c: Context, name: const u8[:], state: i64,
+                         cond: bool) = "gs_ui_window_show_if";
 // A line across the window.
-extern "gs_ui_rule_horizontal" fn rule_horizontal(c: Context, color: Color, rounding: bool);
+extern fn rule_horizontal(c: Context, color: Color, rounding: bool) = "gs_ui_rule_horizontal";
 
 // --- layout ------------------------------------------------------------------
 
 // Widgets fill rows left to right: a row's layout says how many columns and
 // how wide.
-extern "gs_ui_layout_set_min_row_height" fn layout_set_min_row_height(c: Context, height: f32);
-extern "gs_ui_layout_reset_min_row_height" fn layout_reset_min_row_height(c: Context);
+extern fn layout_set_min_row_height(c: Context, height: f32) = "gs_ui_layout_set_min_row_height";
+extern fn layout_reset_min_row_height(c: Context) = "gs_ui_layout_reset_min_row_height";
 // Where the next widget goes.
-extern "gs_ui_layout_widget_bounds" fn layout_widget_bounds(c: Context) -> Rect;
-extern "gs_ui_layout_ratio_from_pixel" fn layout_ratio_from_pixel(c: Context,
-                                                                  pixel_width: f32) -> f32;
+extern fn layout_widget_bounds(c: Context) -> Rect = "gs_ui_layout_widget_bounds";
+extern fn layout_ratio_from_pixel(c: Context,
+                                  pixel_width: f32) -> f32 = "gs_ui_layout_ratio_from_pixel";
 // `cols` columns sharing the width, or `item_width` pixels each.
-extern "gs_ui_layout_row_dynamic" fn layout_row_dynamic(c: Context, height: f32, cols: i64);
-extern "gs_ui_layout_row_static" fn layout_row_static(c: Context, height: f32, item_width: i64,
-                                                      cols: i64);
+extern fn layout_row_dynamic(c: Context, height: f32, cols: i64) = "gs_ui_layout_row_dynamic";
+extern fn layout_row_static(c: Context, height: f32, item_width: i64,
+                            cols: i64) = "gs_ui_layout_row_static";
 // A row whose widths are pushed one at a time, as ratios (DYNAMIC) or
 // pixels (STATIC), each before its widget.
-extern "gs_ui_layout_row_begin" fn layout_row_begin(c: Context, format: i64, row_height: f32,
-                                                    cols: i64);
-extern "gs_ui_layout_row_push" fn layout_row_push(c: Context, value: f32);
-extern "gs_ui_layout_row_end" fn layout_row_end(c: Context);
+extern fn layout_row_begin(c: Context, format: i64, row_height: f32,
+                           cols: i64) = "gs_ui_layout_row_begin";
+extern fn layout_row_push(c: Context, value: f32) = "gs_ui_layout_row_push";
+extern fn layout_row_end(c: Context) = "gs_ui_layout_row_end";
 // A row with a column per ratio or width.
-extern "gs_ui_layout_row" fn layout_row(c: Context, format: i64, height: f32, ratios: const f32[:]);
+extern fn layout_row(c: Context, format: i64, height: f32, ratios: const f32[:]) = "gs_ui_layout_row";
 // A row of columns of fixed, variable or remaining width, up to 16.
-extern "gs_ui_layout_row_template_begin" fn layout_row_template_begin(c: Context, row_height: f32);
-extern "gs_ui_layout_row_template_push_dynamic" fn layout_row_template_push_dynamic(c: Context);
-extern "gs_ui_layout_row_template_push_variable" fn layout_row_template_push_variable(
-    c: Context, min_width: f32);
-extern "gs_ui_layout_row_template_push_static" fn layout_row_template_push_static(c: Context,
-                                                                                  width: f32);
-extern "gs_ui_layout_row_template_end" fn layout_row_template_end(c: Context);
+extern fn layout_row_template_begin(c: Context, row_height: f32) = "gs_ui_layout_row_template_begin";
+extern fn layout_row_template_push_dynamic(c: Context) = "gs_ui_layout_row_template_push_dynamic";
+extern fn layout_row_template_push_variable(
+    c: Context, min_width: f32) = "gs_ui_layout_row_template_push_variable";
+extern fn layout_row_template_push_static(c: Context,
+                                          width: f32) = "gs_ui_layout_row_template_push_static";
+extern fn layout_row_template_end(c: Context) = "gs_ui_layout_row_template_end";
 // A space `height` high where widgets go where layout_space_push puts
 // them, in pixels (STATIC) or parts of the space (DYNAMIC).
-extern "gs_ui_layout_space_begin" fn layout_space_begin(c: Context, format: i64, height: f32,
-                                                        widget_count: i64);
-extern "gs_ui_layout_space_push" fn layout_space_push(c: Context, bounds: Rect);
-extern "gs_ui_layout_space_end" fn layout_space_end(c: Context);
-extern "gs_ui_layout_space_bounds" fn layout_space_bounds(c: Context) -> Rect;
-extern "gs_ui_layout_space_to_screen" fn layout_space_to_screen(c: Context, v: float2) -> float2;
-extern "gs_ui_layout_space_to_local" fn layout_space_to_local(c: Context, v: float2) -> float2;
-extern "gs_ui_layout_space_rect_to_screen" fn layout_space_rect_to_screen(c: Context,
-                                                                          r: Rect) -> Rect;
-extern "gs_ui_layout_space_rect_to_local" fn layout_space_rect_to_local(c: Context,
-                                                                        r: Rect) -> Rect;
+extern fn layout_space_begin(c: Context, format: i64, height: f32,
+                             widget_count: i64) = "gs_ui_layout_space_begin";
+extern fn layout_space_push(c: Context, bounds: Rect) = "gs_ui_layout_space_push";
+extern fn layout_space_end(c: Context) = "gs_ui_layout_space_end";
+extern fn layout_space_bounds(c: Context) -> Rect = "gs_ui_layout_space_bounds";
+extern fn layout_space_to_screen(c: Context, v: float2) -> float2 = "gs_ui_layout_space_to_screen";
+extern fn layout_space_to_local(c: Context, v: float2) -> float2 = "gs_ui_layout_space_to_local";
+extern fn layout_space_rect_to_screen(c: Context,
+                                      r: Rect) -> Rect = "gs_ui_layout_space_rect_to_screen";
+extern fn layout_space_rect_to_local(c: Context,
+                                     r: Rect) -> Rect = "gs_ui_layout_space_rect_to_local";
 // An empty place in the row.
-extern "gs_ui_spacer" fn spacer(c: Context);
+extern fn spacer(c: Context) = "gs_ui_spacer";
 
 // --- groups ------------------------------------------------------------------
 
 // A scrolling area inside a window, as one widget of the row: group_end
 // follows when it returns true.
-extern "gs_ui_group_begin" fn group_begin(c: Context, title: const u8[:], flags: i64) -> bool;
-extern "gs_ui_group_begin_titled" fn group_begin_titled(c: Context, id: const u8[:],
-                                                        title: const u8[:], flags: i64) -> bool;
-extern "gs_ui_group_end" fn group_end(c: Context);
+extern fn group_begin(c: Context, title: const u8[:], flags: i64) -> bool = "gs_ui_group_begin";
+extern fn group_begin_titled(c: Context, id: const u8[:],
+                             title: const u8[:], flags: i64) -> bool = "gs_ui_group_begin_titled";
+extern fn group_end(c: Context) = "gs_ui_group_end";
 // A group whose scroll offset the program keeps: given to begin, and what
 // the user scrolled it to back from end.
-extern "gs_ui_group_scrolled_begin" fn group_scrolled_begin(c: Context, offset: Scroll,
-                                                            title: const u8[:], flags: i64) -> bool;
-extern "gs_ui_group_scrolled_end" fn group_scrolled_end(c: Context) -> Scroll;
-extern "gs_ui_group_get_scroll" fn group_get_scroll(c: Context, id: const u8[:]) -> Scroll;
-extern "gs_ui_group_set_scroll" fn group_set_scroll(c: Context, id: const u8[:], x: i64, y: i64);
+extern fn group_scrolled_begin(c: Context, offset: Scroll,
+                               title: const u8[:], flags: i64) -> bool = "gs_ui_group_scrolled_begin";
+extern fn group_scrolled_end(c: Context) -> Scroll = "gs_ui_group_scrolled_end";
+extern fn group_get_scroll(c: Context, id: const u8[:]) -> Scroll = "gs_ui_group_get_scroll";
+extern fn group_set_scroll(c: Context, id: const u8[:], x: i64, y: i64) = "gs_ui_group_set_scroll";
 
 // --- trees -------------------------------------------------------------------
 
 // A collapsible node or tab (TREE_NODE, TREE_TAB): true while open, when
 // tree_pop follows. Its state is kept by a hash of `hash` (or, empty, the
 // title) and `seed`: nodes with the same title need a different one.
-extern "gs_ui_tree_push_hashed" fn tree_push_hashed(c: Context, tree_type: i64,
-                                                    title: const u8[:], initial_state: i64,
-                                                    hash: const u8[:], seed: i64) -> bool;
+extern fn tree_push_hashed(c: Context, tree_type: i64,
+                           title: const u8[:], initial_state: i64,
+                           hash: const u8[:], seed: i64) -> bool = "gs_ui_tree_push_hashed";
 fn tree_push(c: Context, tree_type: i64, title: const u8[:], initial_state: i64) -> bool {
     tree_push_hashed(c, tree_type, title, initial_state, "", 0)
 }
@@ -1148,239 +1148,239 @@ fn tree_push_id(c: Context, tree_type: i64, title: const u8[:], initial_state: i
                 id: i64) -> bool {
     tree_push_hashed(c, tree_type, title, initial_state, "", id)
 }
-extern "gs_ui_tree_image_push_hashed" fn tree_image_push_hashed(c: Context, tree_type: i64,
-                                                                img: Image, title: const u8[:],
-                                                                initial_state: i64,
-                                                                hash: const u8[:],
-                                                                seed: i64) -> bool;
+extern fn tree_image_push_hashed(c: Context, tree_type: i64,
+                                 img: Image, title: const u8[:],
+                                 initial_state: i64,
+                                 hash: const u8[:],
+                                 seed: i64) -> bool = "gs_ui_tree_image_push_hashed";
 fn tree_image_push(c: Context, tree_type: i64, img: Image, title: const u8[:],
                    initial_state: i64) -> bool {
     tree_image_push_hashed(c, tree_type, img, title, initial_state, "", 0)
 }
-extern "gs_ui_tree_pop" fn tree_pop(c: Context);
+extern fn tree_pop(c: Context) = "gs_ui_tree_pop";
 // A node whose state (MINIMIZED, MAXIMIZED) the program keeps.
-extern "gs_ui_tree_state_push" fn tree_state_push(c: Context, tree_type: i64, title: const u8[:],
-                                                  state: i64&) -> bool;
-extern "gs_ui_tree_state_image_push" fn tree_state_image_push(c: Context, tree_type: i64,
-                                                              img: Image, title: const u8[:],
-                                                              state: i64&) -> bool;
-extern "gs_ui_tree_state_pop" fn tree_state_pop(c: Context);
+extern fn tree_state_push(c: Context, tree_type: i64, title: const u8[:],
+                          state: i64&) -> bool = "gs_ui_tree_state_push";
+extern fn tree_state_image_push(c: Context, tree_type: i64,
+                                img: Image, title: const u8[:],
+                                state: i64&) -> bool = "gs_ui_tree_state_image_push";
+extern fn tree_state_pop(c: Context) = "gs_ui_tree_state_pop";
 // A node that is also selectable.
-extern "gs_ui_tree_element_push_hashed" fn tree_element_push_hashed(c: Context, tree_type: i64,
-                                                                    title: const u8[:],
-                                                                    initial_state: i64,
-                                                                    selected: bool&,
-                                                                    hash: const u8[:],
-                                                                    seed: i64) -> bool;
+extern fn tree_element_push_hashed(c: Context, tree_type: i64,
+                                   title: const u8[:],
+                                   initial_state: i64,
+                                   selected: bool&,
+                                   hash: const u8[:],
+                                   seed: i64) -> bool = "gs_ui_tree_element_push_hashed";
 fn tree_element_push(c: Context, tree_type: i64, title: const u8[:], initial_state: i64,
                      selected: bool&) -> bool {
     tree_element_push_hashed(c, tree_type, title, initial_state, selected, "", 0)
 }
-extern "gs_ui_tree_element_image_push_hashed" fn tree_element_image_push_hashed(
+extern fn tree_element_image_push_hashed(
     c: Context, tree_type: i64, img: Image, title: const u8[:], initial_state: i64,
-    selected: bool&, hash: const u8[:], seed: i64) -> bool;
-extern "gs_ui_tree_element_pop" fn tree_element_pop(c: Context);
+    selected: bool&, hash: const u8[:], seed: i64) -> bool = "gs_ui_tree_element_image_push_hashed";
+extern fn tree_element_pop(c: Context) = "gs_ui_tree_element_pop";
 
 // --- list views --------------------------------------------------------------
 
 // A scrolling list of row_count rows, of which only the ones in view are
 // built: begin to end of the view returned. list_view_end follows when true.
-extern "gs_ui_list_view_begin" fn list_view_begin_into(c: Context, out: ListView&, id: const u8[:],
-                                                       flags: i64, row_height: i64,
-                                                       row_count: i64) -> bool;
+extern fn list_view_begin_into(c: Context, out: ListView&, id: const u8[:],
+                               flags: i64, row_height: i64,
+                               row_count: i64) -> bool = "gs_ui_list_view_begin";
 fn list_view_begin(c: Context, id: const u8[:], flags: i64, row_height: i64,
                    row_count: i64) -> ListView, bool {
     var view = ListView { 0, 0, 0 };
     let open = list_view_begin_into(c, view, id, flags, row_height, row_count);
     return view, open;
 }
-extern "gs_ui_list_view_end" fn list_view_end(c: Context);
+extern fn list_view_end(c: Context) = "gs_ui_list_view_end";
 
 // --- widgets in general ------------------------------------------------------
 
 // Takes the next place in the row for a widget of the program's own, drawn
 // with the canvas functions below: whether it can be seen and used
 // (WIDGET_*), and where.
-extern "gs_ui_widget" fn widget_into(c: Context, bounds: Rect&) -> i64;
+extern fn widget_into(c: Context, bounds: Rect&) -> i64 = "gs_ui_widget";
 fn widget(c: Context) -> i64, Rect {
     var r = Rect { 0.0, 0.0, 0.0, 0.0 };
     let state = widget_into(c, r);
     return state, r;
 }
 // The next widget's place, without taking it.
-extern "gs_ui_widget_bounds" fn widget_bounds(c: Context) -> Rect;
-extern "gs_ui_widget_position" fn widget_position(c: Context) -> float2;
-extern "gs_ui_widget_size" fn widget_size(c: Context) -> float2;
-extern "gs_ui_widget_width" fn widget_width(c: Context) -> f32;
-extern "gs_ui_widget_height" fn widget_height(c: Context) -> f32;
-extern "gs_ui_widget_is_hovered" fn widget_is_hovered(c: Context) -> bool;
-extern "gs_ui_widget_is_mouse_clicked" fn widget_is_mouse_clicked(c: Context,
-                                                                  button: i64) -> bool;
-extern "gs_ui_widget_has_mouse_click_down" fn widget_has_mouse_click_down(c: Context, button: i64,
-                                                                          down: bool) -> bool;
+extern fn widget_bounds(c: Context) -> Rect = "gs_ui_widget_bounds";
+extern fn widget_position(c: Context) -> float2 = "gs_ui_widget_position";
+extern fn widget_size(c: Context) -> float2 = "gs_ui_widget_size";
+extern fn widget_width(c: Context) -> f32 = "gs_ui_widget_width";
+extern fn widget_height(c: Context) -> f32 = "gs_ui_widget_height";
+extern fn widget_is_hovered(c: Context) -> bool = "gs_ui_widget_is_hovered";
+extern fn widget_is_mouse_clicked(c: Context,
+                                  button: i64) -> bool = "gs_ui_widget_is_mouse_clicked";
+extern fn widget_has_mouse_click_down(c: Context, button: i64,
+                                      down: bool) -> bool = "gs_ui_widget_has_mouse_click_down";
 // Skips `cols` places.
-extern "gs_ui_spacing" fn spacing(c: Context, cols: i64);
+extern fn spacing(c: Context, cols: i64) = "gs_ui_spacing";
 // Widgets between these are shown dimmed and do nothing.
-extern "gs_ui_widget_disable_begin" fn widget_disable_begin(c: Context);
-extern "gs_ui_widget_disable_end" fn widget_disable_end(c: Context);
+extern fn widget_disable_begin(c: Context) = "gs_ui_widget_disable_begin";
+extern fn widget_disable_end(c: Context) = "gs_ui_widget_disable_end";
 
 // --- text and images ---------------------------------------------------------
 
-extern "gs_ui_label" fn label(c: Context, text: const u8[:], align: i64);
-extern "gs_ui_label_colored" fn label_colored(c: Context, text: const u8[:], align: i64,
-                                              color: Color);
+extern fn label(c: Context, text: const u8[:], align: i64) = "gs_ui_label";
+extern fn label_colored(c: Context, text: const u8[:], align: i64,
+                        color: Color) = "gs_ui_label_colored";
 // Wrapped onto as many lines as the widget is high.
-extern "gs_ui_label_wrap" fn label_wrap(c: Context, text: const u8[:]);
-extern "gs_ui_label_colored_wrap" fn label_colored_wrap(c: Context, text: const u8[:],
-                                                        color: Color);
-extern "gs_ui_image_widget" fn image(c: Context, img: Image);
-extern "gs_ui_image_color" fn image_color(c: Context, img: Image, color: Color);
+extern fn label_wrap(c: Context, text: const u8[:]) = "gs_ui_label_wrap";
+extern fn label_colored_wrap(c: Context, text: const u8[:],
+                             color: Color) = "gs_ui_label_colored_wrap";
+extern fn image(c: Context, img: Image) = "gs_ui_image_widget";
+extern fn image_color(c: Context, img: Image, color: Color) = "gs_ui_image_color";
 // "prefix: value", as Nuklear writes it.
-extern "gs_ui_value_bool" fn value_bool(c: Context, prefix: const u8[:], value: bool);
-extern "gs_ui_value_int" fn value_int(c: Context, prefix: const u8[:], value: i64);
-extern "gs_ui_value_uint" fn value_uint(c: Context, prefix: const u8[:], value: u64);
-extern "gs_ui_value_float" fn value_float(c: Context, prefix: const u8[:], value: f32);
-extern "gs_ui_value_color_byte" fn value_color_byte(c: Context, prefix: const u8[:], color: Color);
-extern "gs_ui_value_color_float" fn value_color_float(c: Context, prefix: const u8[:],
-                                                      color: Color);
-extern "gs_ui_value_color_hex" fn value_color_hex(c: Context, prefix: const u8[:], color: Color);
+extern fn value_bool(c: Context, prefix: const u8[:], value: bool) = "gs_ui_value_bool";
+extern fn value_int(c: Context, prefix: const u8[:], value: i64) = "gs_ui_value_int";
+extern fn value_uint(c: Context, prefix: const u8[:], value: u64) = "gs_ui_value_uint";
+extern fn value_float(c: Context, prefix: const u8[:], value: f32) = "gs_ui_value_float";
+extern fn value_color_byte(c: Context, prefix: const u8[:], color: Color) = "gs_ui_value_color_byte";
+extern fn value_color_float(c: Context, prefix: const u8[:],
+                            color: Color) = "gs_ui_value_color_float";
+extern fn value_color_hex(c: Context, prefix: const u8[:], color: Color) = "gs_ui_value_color_hex";
 // Text that is clicked like a button.
-extern "gs_ui_link_label" fn link_label(c: Context, text: const u8[:], align: i64) -> bool;
-extern "gs_ui_link_label_colored" fn link_label_colored(c: Context, text: const u8[:], align: i64,
-                                                        color: Color) -> bool;
+extern fn link_label(c: Context, text: const u8[:], align: i64) -> bool = "gs_ui_link_label";
+extern fn link_label_colored(c: Context, text: const u8[:], align: i64,
+                             color: Color) -> bool = "gs_ui_link_label_colored";
 // LINK_UNDERLINE_*.
-extern "gs_ui_link_label_underline" fn link_label_underline(c: Context, text: const u8[:],
-                                                            align: i64, underline: i64) -> bool;
+extern fn link_label_underline(c: Context, text: const u8[:],
+                               align: i64, underline: i64) -> bool = "gs_ui_link_label_underline";
 fn link_label_hover_underline(c: Context, text: const u8[:], align: i64) -> bool {
     link_label_underline(c, text, align, LINK_UNDERLINE_HOVER)
 }
 fn link_label_no_underline(c: Context, text: const u8[:], align: i64) -> bool {
     link_label_underline(c, text, align, LINK_UNDERLINE_NONE)
 }
-extern "gs_ui_link_label_styled" fn link_label_styled(c: Context, style: const StyleLink&,
-                                                      text: const u8[:], align: i64) -> bool;
+extern fn link_label_styled(c: Context, style: const StyleLink&,
+                            text: const u8[:], align: i64) -> bool = "gs_ui_link_label_styled";
 
 // --- buttons -----------------------------------------------------------------
 
 // Each is true when clicked (or, BUTTON_REPEATER, while held).
-extern "gs_ui_button_label" fn button_label(c: Context, text: const u8[:]) -> bool;
-extern "gs_ui_button_color" fn button_color(c: Context, color: Color) -> bool;
-extern "gs_ui_button_symbol" fn button_symbol(c: Context, symbol: i64) -> bool;
-extern "gs_ui_button_image" fn button_image(c: Context, img: Image) -> bool;
-extern "gs_ui_button_symbol_label" fn button_symbol_label(c: Context, symbol: i64,
-                                                          text: const u8[:], align: i64) -> bool;
-extern "gs_ui_button_image_label" fn button_image_label(c: Context, img: Image, text: const u8[:],
-                                                        align: i64) -> bool;
+extern fn button_label(c: Context, text: const u8[:]) -> bool = "gs_ui_button_label";
+extern fn button_color(c: Context, color: Color) -> bool = "gs_ui_button_color";
+extern fn button_symbol(c: Context, symbol: i64) -> bool = "gs_ui_button_symbol";
+extern fn button_image(c: Context, img: Image) -> bool = "gs_ui_button_image";
+extern fn button_symbol_label(c: Context, symbol: i64,
+                              text: const u8[:], align: i64) -> bool = "gs_ui_button_symbol_label";
+extern fn button_image_label(c: Context, img: Image, text: const u8[:],
+                             align: i64) -> bool = "gs_ui_button_image_label";
 // In a style of their own: style(ctx).button, changed.
-extern "gs_ui_button_label_styled" fn button_label_styled(c: Context, style: const StyleButton&,
-                                                          text: const u8[:]) -> bool;
-extern "gs_ui_button_symbol_styled" fn button_symbol_styled(c: Context,
-                                                            style: const StyleButton&,
-                                                            symbol: i64) -> bool;
-extern "gs_ui_button_image_styled" fn button_image_styled(c: Context, style: const StyleButton&,
-                                                          img: Image) -> bool;
-extern "gs_ui_button_symbol_label_styled" fn button_symbol_label_styled(
-    c: Context, style: const StyleButton&, symbol: i64, text: const u8[:], align: i64) -> bool;
-extern "gs_ui_button_image_label_styled" fn button_image_label_styled(
-    c: Context, style: const StyleButton&, img: Image, text: const u8[:], align: i64) -> bool;
+extern fn button_label_styled(c: Context, style: const StyleButton&,
+                              text: const u8[:]) -> bool = "gs_ui_button_label_styled";
+extern fn button_symbol_styled(c: Context,
+                               style: const StyleButton&,
+                               symbol: i64) -> bool = "gs_ui_button_symbol_styled";
+extern fn button_image_styled(c: Context, style: const StyleButton&,
+                              img: Image) -> bool = "gs_ui_button_image_styled";
+extern fn button_symbol_label_styled(
+    c: Context, style: const StyleButton&, symbol: i64, text: const u8[:], align: i64) -> bool = "gs_ui_button_symbol_label_styled";
+extern fn button_image_label_styled(
+    c: Context, style: const StyleButton&, img: Image, text: const u8[:], align: i64) -> bool = "gs_ui_button_image_label_styled";
 // BUTTON_DEFAULT or BUTTON_REPEATER, for the buttons that follow.
-extern "gs_ui_button_set_behavior" fn button_set_behavior(c: Context, behavior: i64);
-extern "gs_ui_button_push_behavior" fn button_push_behavior(c: Context, behavior: i64) -> bool;
-extern "gs_ui_button_pop_behavior" fn button_pop_behavior(c: Context) -> bool;
+extern fn button_set_behavior(c: Context, behavior: i64) = "gs_ui_button_set_behavior";
+extern fn button_push_behavior(c: Context, behavior: i64) -> bool = "gs_ui_button_push_behavior";
+extern fn button_pop_behavior(c: Context) -> bool = "gs_ui_button_pop_behavior";
 
 // --- check boxes, radio buttons, selectables ---------------------------------
 
 // The check box's state now, given what it was.
-extern "gs_ui_check_label" fn check_label(c: Context, text: const u8[:], active: bool) -> bool;
-extern "gs_ui_check_label_align" fn check_label_align(c: Context, text: const u8[:], active: bool,
-                                                      widget_align: i64, text_align: i64) -> bool;
+extern fn check_label(c: Context, text: const u8[:], active: bool) -> bool = "gs_ui_check_label";
+extern fn check_label_align(c: Context, text: const u8[:], active: bool,
+                            widget_align: i64, text_align: i64) -> bool = "gs_ui_check_label_align";
 // `flags` with `value`'s bits set or cleared.
-extern "gs_ui_check_flags_label" fn check_flags_label(c: Context, text: const u8[:], flags: i64,
-                                                      value: i64) -> i64;
+extern fn check_flags_label(c: Context, text: const u8[:], flags: i64,
+                            value: i64) -> i64 = "gs_ui_check_flags_label";
 // These change `active` (or flags), and say whether they did.
-extern "gs_ui_checkbox_label" fn checkbox_label(c: Context, text: const u8[:],
-                                                active: bool&) -> bool;
-extern "gs_ui_checkbox_label_align" fn checkbox_label_align(c: Context, text: const u8[:],
-                                                            active: bool&, widget_align: i64,
-                                                            text_align: i64) -> bool;
-extern "gs_ui_checkbox_flags_label" fn checkbox_flags_label(c: Context, text: const u8[:],
-                                                            flags: i64&, value: i64) -> bool;
-extern "gs_ui_radio_label" fn radio_label(c: Context, text: const u8[:], active: bool&) -> bool;
-extern "gs_ui_radio_label_align" fn radio_label_align(c: Context, text: const u8[:],
-                                                      active: bool&, widget_align: i64,
-                                                      text_align: i64) -> bool;
+extern fn checkbox_label(c: Context, text: const u8[:],
+                         active: bool&) -> bool = "gs_ui_checkbox_label";
+extern fn checkbox_label_align(c: Context, text: const u8[:],
+                               active: bool&, widget_align: i64,
+                               text_align: i64) -> bool = "gs_ui_checkbox_label_align";
+extern fn checkbox_flags_label(c: Context, text: const u8[:],
+                               flags: i64&, value: i64) -> bool = "gs_ui_checkbox_flags_label";
+extern fn radio_label(c: Context, text: const u8[:], active: bool&) -> bool = "gs_ui_radio_label";
+extern fn radio_label_align(c: Context, text: const u8[:],
+                            active: bool&, widget_align: i64,
+                            text_align: i64) -> bool = "gs_ui_radio_label_align";
 // A radio button's state now: true when it is the one chosen.
-extern "gs_ui_option_label" fn option_label(c: Context, text: const u8[:], active: bool) -> bool;
-extern "gs_ui_option_label_align" fn option_label_align(c: Context, text: const u8[:],
-                                                        active: bool, widget_align: i64,
-                                                        text_align: i64) -> bool;
+extern fn option_label(c: Context, text: const u8[:], active: bool) -> bool = "gs_ui_option_label";
+extern fn option_label_align(c: Context, text: const u8[:],
+                             active: bool, widget_align: i64,
+                             text_align: i64) -> bool = "gs_ui_option_label_align";
 // A selectable changes `value`, and says whether it did; select returns
 // its state now.
-extern "gs_ui_selectable_label" fn selectable_label(c: Context, text: const u8[:], align: i64,
-                                                    value: bool&) -> bool;
-extern "gs_ui_selectable_image_label" fn selectable_image_label(c: Context, img: Image,
-                                                                text: const u8[:], align: i64,
-                                                                value: bool&) -> bool;
-extern "gs_ui_selectable_symbol_label" fn selectable_symbol_label(c: Context, symbol: i64,
-                                                                  text: const u8[:], align: i64,
-                                                                  value: bool&) -> bool;
-extern "gs_ui_select_label" fn select_label(c: Context, text: const u8[:], align: i64,
-                                            value: bool) -> bool;
-extern "gs_ui_select_image_label" fn select_image_label(c: Context, img: Image, text: const u8[:],
-                                                        align: i64, value: bool) -> bool;
-extern "gs_ui_select_symbol_label" fn select_symbol_label(c: Context, symbol: i64,
-                                                          text: const u8[:], align: i64,
-                                                          value: bool) -> bool;
+extern fn selectable_label(c: Context, text: const u8[:], align: i64,
+                           value: bool&) -> bool = "gs_ui_selectable_label";
+extern fn selectable_image_label(c: Context, img: Image,
+                                 text: const u8[:], align: i64,
+                                 value: bool&) -> bool = "gs_ui_selectable_image_label";
+extern fn selectable_symbol_label(c: Context, symbol: i64,
+                                  text: const u8[:], align: i64,
+                                  value: bool&) -> bool = "gs_ui_selectable_symbol_label";
+extern fn select_label(c: Context, text: const u8[:], align: i64,
+                       value: bool) -> bool = "gs_ui_select_label";
+extern fn select_image_label(c: Context, img: Image, text: const u8[:],
+                             align: i64, value: bool) -> bool = "gs_ui_select_image_label";
+extern fn select_symbol_label(c: Context, symbol: i64,
+                              text: const u8[:], align: i64,
+                              value: bool) -> bool = "gs_ui_select_symbol_label";
 
 // --- sliders, knobs, progress bars, color pickers ----------------------------
 
 // The slide_ ones return the value now; the slider_ ones change it and
 // say whether they did.
-extern "gs_ui_slide_float" fn slide_float(c: Context, min: f32, value: f32, max: f32,
-                                          step: f32) -> f32;
-extern "gs_ui_slide_int" fn slide_int(c: Context, min: i64, value: i64, max: i64, step: i64) -> i64;
-extern "gs_ui_slider_float" fn slider_float(c: Context, min: f32, value: f32&, max: f32,
-                                            step: f32) -> bool;
-extern "gs_ui_slider_int" fn slider_int(c: Context, min: i64, value: i64&, max: i64,
-                                        step: i64) -> bool;
+extern fn slide_float(c: Context, min: f32, value: f32, max: f32,
+                      step: f32) -> f32 = "gs_ui_slide_float";
+extern fn slide_int(c: Context, min: i64, value: i64, max: i64, step: i64) -> i64 = "gs_ui_slide_int";
+extern fn slider_float(c: Context, min: f32, value: f32&, max: f32,
+                       step: f32) -> bool = "gs_ui_slider_float";
+extern fn slider_int(c: Context, min: i64, value: i64&, max: i64,
+                     step: i64) -> bool = "gs_ui_slider_int";
 // A dial: turned by dragging, zero at `zero_direction`, with a dead zone
 // of that many degrees there.
-extern "gs_ui_knob_float" fn knob_float(c: Context, min: f32, value: f32&, max: f32, step: f32,
-                                        zero_direction: i64, dead_zone_degrees: f32) -> bool;
-extern "gs_ui_knob_int" fn knob_int(c: Context, min: i64, value: i64&, max: i64, step: i64,
-                                    zero_direction: i64, dead_zone_degrees: f32) -> bool;
-extern "gs_ui_progress" fn progress(c: Context, cur: i64&, max: i64, modifiable: bool) -> bool;
-extern "gs_ui_prog" fn prog(c: Context, cur: i64, max: i64, modifiable: bool) -> i64;
+extern fn knob_float(c: Context, min: f32, value: f32&, max: f32, step: f32,
+                     zero_direction: i64, dead_zone_degrees: f32) -> bool = "gs_ui_knob_float";
+extern fn knob_int(c: Context, min: i64, value: i64&, max: i64, step: i64,
+                   zero_direction: i64, dead_zone_degrees: f32) -> bool = "gs_ui_knob_int";
+extern fn progress(c: Context, cur: i64&, max: i64, modifiable: bool) -> bool = "gs_ui_progress";
+extern fn prog(c: Context, cur: i64, max: i64, modifiable: bool) -> i64 = "gs_ui_prog";
 // A color, RGB or RGBA: picker returns it, pick changes it.
-extern "gs_ui_color_picker" fn color_picker(c: Context, color: Colorf, format: i64) -> Colorf;
-extern "gs_ui_color_pick" fn color_pick(c: Context, color: Colorf&, format: i64) -> bool;
+extern fn color_picker(c: Context, color: Colorf, format: i64) -> Colorf = "gs_ui_color_picker";
+extern fn color_pick(c: Context, color: Colorf&, format: i64) -> bool = "gs_ui_color_pick";
 
 // --- properties --------------------------------------------------------------
 
 // A number with its name, dragged, stepped with its arrows, or typed. A
 // name starting with '#' is not shown, and makes a property unique by
 // order rather than name.
-extern "gs_ui_property_int" fn property_int(c: Context, name: const u8[:], min: i64, value: i64&,
-                                            max: i64, step: i64, inc_per_pixel: f32) -> bool;
-extern "gs_ui_property_float" fn property_float(c: Context, name: const u8[:], min: f32,
-                                                value: f32&, max: f32, step: f32,
-                                                inc_per_pixel: f32) -> bool;
-extern "gs_ui_property_double" fn property_double(c: Context, name: const u8[:], min: f64,
-                                                  value: f64&, max: f64, step: f64,
-                                                  inc_per_pixel: f32) -> bool;
-extern "gs_ui_propertyi" fn propertyi(c: Context, name: const u8[:], min: i64, value: i64, max: i64,
-                                      step: i64, inc_per_pixel: f32) -> i64;
-extern "gs_ui_propertyf" fn propertyf(c: Context, name: const u8[:], min: f32, value: f32, max: f32,
-                                      step: f32, inc_per_pixel: f32) -> f32;
-extern "gs_ui_propertyd" fn propertyd(c: Context, name: const u8[:], min: f64, value: f64, max: f64,
-                                      step: f64, inc_per_pixel: f32) -> f64;
+extern fn property_int(c: Context, name: const u8[:], min: i64, value: i64&,
+                       max: i64, step: i64, inc_per_pixel: f32) -> bool = "gs_ui_property_int";
+extern fn property_float(c: Context, name: const u8[:], min: f32,
+                         value: f32&, max: f32, step: f32,
+                         inc_per_pixel: f32) -> bool = "gs_ui_property_float";
+extern fn property_double(c: Context, name: const u8[:], min: f64,
+                          value: f64&, max: f64, step: f64,
+                          inc_per_pixel: f32) -> bool = "gs_ui_property_double";
+extern fn propertyi(c: Context, name: const u8[:], min: i64, value: i64, max: i64,
+                    step: i64, inc_per_pixel: f32) -> i64 = "gs_ui_propertyi";
+extern fn propertyf(c: Context, name: const u8[:], min: f32, value: f32, max: f32,
+                    step: f32, inc_per_pixel: f32) -> f32 = "gs_ui_propertyf";
+extern fn propertyd(c: Context, name: const u8[:], min: f64, value: f64, max: f64,
+                    step: f64, inc_per_pixel: f32) -> f64 = "gs_ui_propertyd";
 
 // --- text editing ------------------------------------------------------------
 
 // A text field over the first `len` bytes of `buffer`, which holds up to
 // buffer.len - 1: returns EDIT_* states.
-extern "gs_ui_edit_string" fn edit_string(c: Context, flags: i64, buffer: u8[:], len: i64&,
-                                          filter: i64) -> i64;
+extern fn edit_string(c: Context, flags: i64, buffer: u8[:], len: i64&,
+                      filter: i64) -> i64 = "gs_ui_edit_string";
 // A text field over `text`, a limited array (u8[..k], u8[..]) holding at
 // most its capacity.
 fn edit_string<T>(c: Context, flags: i64, text: T&, filter: i64) -> i64 {
@@ -1394,19 +1394,19 @@ fn edit_string<T>(c: Context, flags: i64, text: T&, filter: i64) -> i64 {
     r
 }
 // A text field over a text editor, which keeps its undo history.
-extern "gs_ui_edit_buffer" fn edit_buffer(c: Context, flags: i64, edit: TextEdit,
-                                          filter: i64) -> i64;
+extern fn edit_buffer(c: Context, flags: i64, edit: TextEdit,
+                      filter: i64) -> i64 = "gs_ui_edit_buffer";
 // The next edit in the window gets the keyboard, or no edit does.
-extern "gs_ui_edit_focus" fn edit_focus(c: Context, flags: i64);
-extern "gs_ui_edit_unfocus" fn edit_unfocus(c: Context);
+extern fn edit_focus(c: Context, flags: i64) = "gs_ui_edit_focus";
+extern fn edit_unfocus(c: Context) = "gs_ui_edit_unfocus";
 // Whether a FILTER_* lets a character through.
-extern "gs_ui_filter_accepts" fn filter_accepts(filter: i64, rune: u32) -> bool;
+extern fn filter_accepts(filter: i64, rune: u32) -> bool = "gs_ui_filter_accepts";
 
 // A text editor: text, a cursor, a selection and undo, for edit_buffer.
-extern "gs_ui_create_text_edit" fn create_text_edit() -> TextEdit;
-extern "gs_ui_destroy_text_edit" fn destroy(e: TextEdit);
-extern "gs_ui_text_edit_is_valid" fn is_valid(e: TextEdit) -> bool;
-extern "gs_ui_text_edit_text" fn text_into(e: TextEdit, out: u8[:]) -> i64;
+extern fn create_text_edit() -> TextEdit = "gs_ui_create_text_edit";
+extern fn destroy(e: TextEdit) = "gs_ui_destroy_text_edit";
+extern fn is_valid(e: TextEdit) -> bool = "gs_ui_text_edit_is_valid";
+extern fn text_into(e: TextEdit, out: u8[:]) -> i64 = "gs_ui_text_edit_text";
 fn text(e: TextEdit) -> u8[>..] {
     var out: u8[>..] = [];
     let n = text_into(e, out);
@@ -1415,67 +1415,67 @@ fn text(e: TextEdit) -> u8[>..] {
     return out;
 }
 // Replaces the text, with the cursor at its start and no undo.
-extern "gs_ui_text_edit_set_text" fn set_text(e: TextEdit, text: const u8[:]);
-extern "gs_ui_text_edit_state_of" fn state(e: TextEdit) -> TextEditState;
-extern "gs_ui_text_edit_set_cursor" fn set_cursor(e: TextEdit, cursor: i64, select_start: i64,
-                                                  select_end: i64);
+extern fn set_text(e: TextEdit, text: const u8[:]) = "gs_ui_text_edit_set_text";
+extern fn state(e: TextEdit) -> TextEditState = "gs_ui_text_edit_state_of";
+extern fn set_cursor(e: TextEdit, cursor: i64, select_start: i64,
+                     select_end: i64) = "gs_ui_text_edit_set_cursor";
 // TEXT_EDIT_MODE_*: what typing does. A new editor only views.
-extern "gs_ui_text_edit_set_mode" fn set_mode(e: TextEdit, mode: i64);
+extern fn set_mode(e: TextEdit, mode: i64) = "gs_ui_text_edit_set_mode";
 // Nuklear's editing operations: typing, deleting characters, the selection,
 // cut and paste, undo and redo.
-extern "gs_ui_textedit_text" fn textedit_text(e: TextEdit, text: const u8[:]);
-extern "gs_ui_textedit_delete" fn textedit_delete(e: TextEdit, at: i64, len: i64);
-extern "gs_ui_textedit_delete_selection" fn textedit_delete_selection(e: TextEdit);
-extern "gs_ui_textedit_select_all" fn textedit_select_all(e: TextEdit);
-extern "gs_ui_textedit_cut" fn textedit_cut(e: TextEdit) -> bool;
-extern "gs_ui_textedit_paste" fn textedit_paste(e: TextEdit, text: const u8[:]) -> bool;
-extern "gs_ui_textedit_undo" fn textedit_undo(e: TextEdit);
-extern "gs_ui_textedit_redo" fn textedit_redo(e: TextEdit);
+extern fn textedit_text(e: TextEdit, text: const u8[:]) = "gs_ui_textedit_text";
+extern fn textedit_delete(e: TextEdit, at: i64, len: i64) = "gs_ui_textedit_delete";
+extern fn textedit_delete_selection(e: TextEdit) = "gs_ui_textedit_delete_selection";
+extern fn textedit_select_all(e: TextEdit) = "gs_ui_textedit_select_all";
+extern fn textedit_cut(e: TextEdit) -> bool = "gs_ui_textedit_cut";
+extern fn textedit_paste(e: TextEdit, text: const u8[:]) -> bool = "gs_ui_textedit_paste";
+extern fn textedit_undo(e: TextEdit) = "gs_ui_textedit_undo";
+extern fn textedit_redo(e: TextEdit) = "gs_ui_textedit_redo";
 
 // --- charts ------------------------------------------------------------------
 
 // A chart of `count` values from min to max, pushed one by one: chart_end
 // follows when true. More slots add more lines or columns, pushed to by
 // index; chart_push says whether the mouse hovers or clicked a value.
-extern "gs_ui_chart_begin" fn chart_begin(c: Context, chart_type: i64, count: i64, min: f32,
-                                          max: f32) -> bool;
-extern "gs_ui_chart_begin_colored" fn chart_begin_colored(c: Context, chart_type: i64, color: Color,
-                                                          active: Color, count: i64, min: f32,
-                                                          max: f32) -> bool;
-extern "gs_ui_chart_add_slot" fn chart_add_slot(c: Context, chart_type: i64, count: i64, min: f32,
-                                                max: f32);
-extern "gs_ui_chart_add_slot_colored" fn chart_add_slot_colored(c: Context, chart_type: i64,
-                                                                color: Color, active: Color,
-                                                                count: i64, min: f32, max: f32);
-extern "gs_ui_chart_push" fn chart_push(c: Context, value: f32) -> i64;
-extern "gs_ui_chart_push_slot" fn chart_push_slot(c: Context, value: f32, slot: i64) -> i64;
-extern "gs_ui_chart_end" fn chart_end(c: Context);
+extern fn chart_begin(c: Context, chart_type: i64, count: i64, min: f32,
+                      max: f32) -> bool = "gs_ui_chart_begin";
+extern fn chart_begin_colored(c: Context, chart_type: i64, color: Color,
+                              active: Color, count: i64, min: f32,
+                              max: f32) -> bool = "gs_ui_chart_begin_colored";
+extern fn chart_add_slot(c: Context, chart_type: i64, count: i64, min: f32,
+                         max: f32) = "gs_ui_chart_add_slot";
+extern fn chart_add_slot_colored(c: Context, chart_type: i64,
+                                 color: Color, active: Color,
+                                 count: i64, min: f32, max: f32) = "gs_ui_chart_add_slot_colored";
+extern fn chart_push(c: Context, value: f32) -> i64 = "gs_ui_chart_push";
+extern fn chart_push_slot(c: Context, value: f32, slot: i64) -> i64 = "gs_ui_chart_push_slot";
+extern fn chart_end(c: Context) = "gs_ui_chart_end";
 // A whole chart of `values`, scaled to their range.
-extern "gs_ui_plot" fn plot(c: Context, chart_type: i64, values: const f32[:]);
+extern fn plot(c: Context, chart_type: i64, values: const f32[:]) = "gs_ui_plot";
 
 // --- popups ------------------------------------------------------------------
 
 // A window over the window, at `rect` relative to it: popup_end follows when
 // true, and popup_close closes it. Popups do not open inside popups.
-extern "gs_ui_popup_begin" fn popup_begin(c: Context, popup_type: i64, title: const u8[:],
-                                          flags: i64, rect: Rect) -> bool;
-extern "gs_ui_popup_close" fn popup_close(c: Context);
-extern "gs_ui_popup_end" fn popup_end(c: Context);
-extern "gs_ui_popup_get_scroll" fn popup_get_scroll(c: Context) -> Scroll;
-extern "gs_ui_popup_set_scroll" fn popup_set_scroll(c: Context, x: i64, y: i64);
+extern fn popup_begin(c: Context, popup_type: i64, title: const u8[:],
+                      flags: i64, rect: Rect) -> bool = "gs_ui_popup_begin";
+extern fn popup_close(c: Context) = "gs_ui_popup_close";
+extern fn popup_end(c: Context) = "gs_ui_popup_end";
+extern fn popup_get_scroll(c: Context) -> Scroll = "gs_ui_popup_get_scroll";
+extern fn popup_set_scroll(c: Context, x: i64, y: i64) = "gs_ui_popup_set_scroll";
 
 // --- combo boxes -------------------------------------------------------------
 
 // A combo box of `count` items separated by `separator` in one string: the
 // index of the one selected now.
-extern "gs_ui_combo_separator" fn combo_separator(c: Context, items: const u8[:], separator: i64,
-                                                  selected: i64, count: i64, item_height: i64,
-                                                  size: float2) -> i64;
+extern fn combo_separator(c: Context, items: const u8[:], separator: i64,
+                          selected: i64, count: i64, item_height: i64,
+                          size: float2) -> i64 = "gs_ui_combo_separator";
 // The same, changing `selected`, and saying whether it did.
-extern "gs_ui_combobox_separator" fn combobox_separator(c: Context, items: const u8[:],
-                                                        separator: i64, selected: i64&,
-                                                        count: i64, item_height: i64,
-                                                        size: float2) -> bool;
+extern fn combobox_separator(c: Context, items: const u8[:],
+                             separator: i64, selected: i64&,
+                             count: i64, item_height: i64,
+                             size: float2) -> bool = "gs_ui_combobox_separator";
 // Items separated by zero bytes.
 fn combo_string(c: Context, items: const u8[:], selected: i64, count: i64, item_height: i64,
                 size: float2) -> i64 {
@@ -1505,117 +1505,117 @@ fn combobox(c: Context, items: const u8[:][:], selected: i64&, item_height: i64,
 }
 // A combo box of the program's own: what the closed box shows, and while
 // open (true) combo items or any widgets, then combo_end.
-extern "gs_ui_combo_begin_label" fn combo_begin_label(c: Context, selected: const u8[:],
-                                                      size: float2) -> bool;
-extern "gs_ui_combo_begin_color" fn combo_begin_color(c: Context, color: Color,
-                                                      size: float2) -> bool;
-extern "gs_ui_combo_begin_symbol" fn combo_begin_symbol(c: Context, symbol: i64,
-                                                        size: float2) -> bool;
-extern "gs_ui_combo_begin_symbol_label" fn combo_begin_symbol_label(c: Context,
-                                                                    selected: const u8[:],
-                                                                    symbol: i64,
-                                                                    size: float2) -> bool;
-extern "gs_ui_combo_begin_image" fn combo_begin_image(c: Context, img: Image, size: float2) -> bool;
-extern "gs_ui_combo_begin_image_label" fn combo_begin_image_label(c: Context,
-                                                                  selected: const u8[:],
-                                                                  img: Image,
-                                                                  size: float2) -> bool;
+extern fn combo_begin_label(c: Context, selected: const u8[:],
+                            size: float2) -> bool = "gs_ui_combo_begin_label";
+extern fn combo_begin_color(c: Context, color: Color,
+                            size: float2) -> bool = "gs_ui_combo_begin_color";
+extern fn combo_begin_symbol(c: Context, symbol: i64,
+                             size: float2) -> bool = "gs_ui_combo_begin_symbol";
+extern fn combo_begin_symbol_label(c: Context,
+                                   selected: const u8[:],
+                                   symbol: i64,
+                                   size: float2) -> bool = "gs_ui_combo_begin_symbol_label";
+extern fn combo_begin_image(c: Context, img: Image, size: float2) -> bool = "gs_ui_combo_begin_image";
+extern fn combo_begin_image_label(c: Context,
+                                  selected: const u8[:],
+                                  img: Image,
+                                  size: float2) -> bool = "gs_ui_combo_begin_image_label";
 // True when clicked, which closes the combo box.
-extern "gs_ui_combo_item_label" fn combo_item_label(c: Context, text: const u8[:],
-                                                    align: i64) -> bool;
-extern "gs_ui_combo_item_image_label" fn combo_item_image_label(c: Context, img: Image,
-                                                                text: const u8[:],
-                                                                align: i64) -> bool;
-extern "gs_ui_combo_item_symbol_label" fn combo_item_symbol_label(c: Context, symbol: i64,
-                                                                  text: const u8[:],
-                                                                  align: i64) -> bool;
-extern "gs_ui_combo_close" fn combo_close(c: Context);
-extern "gs_ui_combo_end" fn combo_end(c: Context);
+extern fn combo_item_label(c: Context, text: const u8[:],
+                           align: i64) -> bool = "gs_ui_combo_item_label";
+extern fn combo_item_image_label(c: Context, img: Image,
+                                 text: const u8[:],
+                                 align: i64) -> bool = "gs_ui_combo_item_image_label";
+extern fn combo_item_symbol_label(c: Context, symbol: i64,
+                                  text: const u8[:],
+                                  align: i64) -> bool = "gs_ui_combo_item_symbol_label";
+extern fn combo_close(c: Context) = "gs_ui_combo_close";
+extern fn combo_end(c: Context) = "gs_ui_combo_end";
 
 // --- contextual menus --------------------------------------------------------
 
 // A menu opened by right-clicking `trigger_bounds`: contextual_end follows
 // when true.
-extern "gs_ui_contextual_begin" fn contextual_begin(c: Context, flags: i64, size: float2,
-                                                    trigger_bounds: Rect) -> bool;
-extern "gs_ui_contextual_item_label" fn contextual_item_label(c: Context, text: const u8[:],
-                                                              align: i64) -> bool;
-extern "gs_ui_contextual_item_image_label" fn contextual_item_image_label(c: Context, img: Image,
-                                                                          text: const u8[:],
-                                                                          align: i64) -> bool;
-extern "gs_ui_contextual_item_symbol_label" fn contextual_item_symbol_label(c: Context,
-                                                                            symbol: i64,
-                                                                            text: const u8[:],
-                                                                            align: i64) -> bool;
-extern "gs_ui_contextual_close" fn contextual_close(c: Context);
-extern "gs_ui_contextual_end" fn contextual_end(c: Context);
+extern fn contextual_begin(c: Context, flags: i64, size: float2,
+                           trigger_bounds: Rect) -> bool = "gs_ui_contextual_begin";
+extern fn contextual_item_label(c: Context, text: const u8[:],
+                                align: i64) -> bool = "gs_ui_contextual_item_label";
+extern fn contextual_item_image_label(c: Context, img: Image,
+                                      text: const u8[:],
+                                      align: i64) -> bool = "gs_ui_contextual_item_image_label";
+extern fn contextual_item_symbol_label(c: Context,
+                                       symbol: i64,
+                                       text: const u8[:],
+                                       align: i64) -> bool = "gs_ui_contextual_item_symbol_label";
+extern fn contextual_close(c: Context) = "gs_ui_contextual_close";
+extern fn contextual_end(c: Context) = "gs_ui_contextual_end";
 
 // --- tooltips ----------------------------------------------------------------
 
 // Text by the pointer this frame, usually after widget_is_hovered.
-extern "gs_ui_tooltip" fn tooltip(c: Context, text: const u8[:]);
-extern "gs_ui_tooltip_offset" fn tooltip_offset(c: Context, text: const u8[:], position: i64,
-                                                offset: float2);
+extern fn tooltip(c: Context, text: const u8[:]) = "gs_ui_tooltip";
+extern fn tooltip_offset(c: Context, text: const u8[:], position: i64,
+                         offset: float2) = "gs_ui_tooltip_offset";
 // A tooltip of widgets, `width` wide: tooltip_end follows when true.
-extern "gs_ui_tooltip_begin" fn tooltip_begin(c: Context, width: f32) -> bool;
-extern "gs_ui_tooltip_begin_offset" fn tooltip_begin_offset(c: Context, width: f32, position: i64,
-                                                            offset: float2) -> bool;
-extern "gs_ui_tooltip_end" fn tooltip_end(c: Context);
+extern fn tooltip_begin(c: Context, width: f32) -> bool = "gs_ui_tooltip_begin";
+extern fn tooltip_begin_offset(c: Context, width: f32, position: i64,
+                               offset: float2) -> bool = "gs_ui_tooltip_begin_offset";
+extern fn tooltip_end(c: Context) = "gs_ui_tooltip_end";
 // A tooltip while the mouse is over `bounds`; the _delay ones once it has
 // stayed still there for the style's tooltip_delay, counting in `timer`,
 // the _clicked one not after a click.
-extern "gs_ui_do_tooltip" fn do_tooltip(c: Context, text: const u8[:], bounds: Rect);
-extern "gs_ui_do_tooltip_delay" fn do_tooltip_delay(c: Context, text: const u8[:], bounds: Rect,
-                                                    timer: f32&);
-extern "gs_ui_do_tooltip_delay_clicked" fn do_tooltip_delay_clicked(c: Context, text: const u8[:],
-                                                                    bounds: Rect, timer: f32&,
-                                                                    clicked: bool&);
+extern fn do_tooltip(c: Context, text: const u8[:], bounds: Rect) = "gs_ui_do_tooltip";
+extern fn do_tooltip_delay(c: Context, text: const u8[:], bounds: Rect,
+                           timer: f32&) = "gs_ui_do_tooltip_delay";
+extern fn do_tooltip_delay_clicked(c: Context, text: const u8[:],
+                                   bounds: Rect, timer: f32&,
+                                   clicked: bool&) = "gs_ui_do_tooltip_delay_clicked";
 
 // --- menus -------------------------------------------------------------------
 
 // A menu bar, first in its window: menus go in it like widgets in a row.
-extern "gs_ui_menubar_begin" fn menubar_begin(c: Context);
-extern "gs_ui_menubar_end" fn menubar_end(c: Context);
+extern fn menubar_begin(c: Context) = "gs_ui_menubar_begin";
+extern fn menubar_end(c: Context) = "gs_ui_menubar_end";
 // A menu that opens `size` large when clicked: menu_end follows when true.
-extern "gs_ui_menu_begin_label" fn menu_begin_label(c: Context, text: const u8[:], align: i64,
-                                                    size: float2) -> bool;
-extern "gs_ui_menu_begin_image" fn menu_begin_image(c: Context, id: const u8[:], img: Image,
-                                                    size: float2) -> bool;
-extern "gs_ui_menu_begin_image_label" fn menu_begin_image_label(c: Context, text: const u8[:],
-                                                                align: i64, img: Image,
-                                                                size: float2) -> bool;
-extern "gs_ui_menu_begin_symbol" fn menu_begin_symbol(c: Context, id: const u8[:], symbol: i64,
-                                                      size: float2) -> bool;
-extern "gs_ui_menu_begin_symbol_label" fn menu_begin_symbol_label(c: Context, text: const u8[:],
-                                                                  align: i64, symbol: i64,
-                                                                  size: float2) -> bool;
+extern fn menu_begin_label(c: Context, text: const u8[:], align: i64,
+                           size: float2) -> bool = "gs_ui_menu_begin_label";
+extern fn menu_begin_image(c: Context, id: const u8[:], img: Image,
+                           size: float2) -> bool = "gs_ui_menu_begin_image";
+extern fn menu_begin_image_label(c: Context, text: const u8[:],
+                                 align: i64, img: Image,
+                                 size: float2) -> bool = "gs_ui_menu_begin_image_label";
+extern fn menu_begin_symbol(c: Context, id: const u8[:], symbol: i64,
+                            size: float2) -> bool = "gs_ui_menu_begin_symbol";
+extern fn menu_begin_symbol_label(c: Context, text: const u8[:],
+                                  align: i64, symbol: i64,
+                                  size: float2) -> bool = "gs_ui_menu_begin_symbol_label";
 // True when clicked, which closes the menu.
-extern "gs_ui_menu_item_label" fn menu_item_label(c: Context, text: const u8[:],
-                                                  align: i64) -> bool;
-extern "gs_ui_menu_item_image_label" fn menu_item_image_label(c: Context, img: Image,
-                                                              text: const u8[:],
-                                                              align: i64) -> bool;
-extern "gs_ui_menu_item_symbol_label" fn menu_item_symbol_label(c: Context, symbol: i64,
-                                                                text: const u8[:],
-                                                                align: i64) -> bool;
-extern "gs_ui_menu_close" fn menu_close(c: Context);
-extern "gs_ui_menu_end" fn menu_end(c: Context);
+extern fn menu_item_label(c: Context, text: const u8[:],
+                          align: i64) -> bool = "gs_ui_menu_item_label";
+extern fn menu_item_image_label(c: Context, img: Image,
+                                text: const u8[:],
+                                align: i64) -> bool = "gs_ui_menu_item_image_label";
+extern fn menu_item_symbol_label(c: Context, symbol: i64,
+                                 text: const u8[:],
+                                 align: i64) -> bool = "gs_ui_menu_item_symbol_label";
+extern fn menu_close(c: Context) = "gs_ui_menu_close";
+extern fn menu_end(c: Context) = "gs_ui_menu_end";
 
 // --- style -------------------------------------------------------------------
 
 // The whole style, changed as a value and set back: `var s = ui::style(ctx);
 // s.window.rounding = 6.0; ui::set_style(ctx, s);`.
-extern "gs_ui_style_of" fn style(c: Context) -> Style;
-extern "gs_ui_set_style" fn set_style(c: Context, s: const Style&);
+extern fn style(c: Context) -> Style = "gs_ui_style_of";
+extern fn set_style(c: Context, s: const Style&) = "gs_ui_set_style";
 // A style for a while: push_style sets it, pop_style puts back the one
 // before.
-extern "gs_ui_push_style" fn push_style(c: Context, s: const Style&) -> bool;
-extern "gs_ui_pop_style" fn pop_style(c: Context) -> bool;
-extern "gs_ui_style_default" fn style_default(c: Context);
+extern fn push_style(c: Context, s: const Style&) -> bool = "gs_ui_push_style";
+extern fn pop_style(c: Context) -> bool = "gs_ui_pop_style";
+extern fn style_default(c: Context) = "gs_ui_style_default";
 // A style from a color per COLOR_*, as Nuklear builds its own from its
 // default table.
-extern "gs_ui_style_from_table" fn style_from_table(c: Context, table: const Color[:]);
-extern "gs_ui_default_color_table" fn default_color_table_into(out: Color[:]) -> i64;
+extern fn style_from_table(c: Context, table: const Color[:]) = "gs_ui_style_from_table";
+extern fn default_color_table_into(out: Color[:]) -> i64 = "gs_ui_default_color_table";
 fn default_color_table() -> Color[>..] {
     var out: Color[>..] = [];
     let n = default_color_table_into(out);
@@ -1623,8 +1623,8 @@ fn default_color_table() -> Color[>..] {
     default_color_table_into(out);
     return out;
 }
-extern "gs_ui_style_get_color_by_name" fn style_get_color_by_name_into(color: i64,
-                                                                       out: u8[:]) -> i64;
+extern fn style_get_color_by_name_into(color: i64,
+                                       out: u8[:]) -> i64 = "gs_ui_style_get_color_by_name";
 // Nuklear's name for a COLOR_*: "NK_COLOR_TEXT".
 fn style_get_color_by_name(color: i64) -> u8[>..] {
     var out: u8[>..] = [];
@@ -1636,17 +1636,17 @@ fn style_get_color_by_name(color: i64) -> u8[>..] {
 // The font text is drawn with from now on, dropping the pushed ones; a
 // context made on a font of the program's draws its shapes with this
 // font's atlas too, and no longer holds on to the one before.
-extern "gs_ui_style_set_font" fn style_set_font(c: Context, font: Font);
-extern "gs_ui_style_push_font" fn style_push_font(c: Context, font: Font) -> bool;
-extern "gs_ui_style_pop_font" fn style_pop_font(c: Context) -> bool;
+extern fn style_set_font(c: Context, font: Font) = "gs_ui_style_set_font";
+extern fn style_push_font(c: Context, font: Font) -> bool = "gs_ui_style_push_font";
+extern fn style_pop_font(c: Context) -> bool = "gs_ui_style_pop_font";
 // Software cursors, drawn by Nuklear at the pointer once loaded: one, or
 // one per CURSOR_*.
-extern "gs_ui_style_load_cursor" fn style_load_cursor(c: Context, cursor: i64, image: Cursor);
-extern "gs_ui_style_load_all_cursors" fn style_load_all_cursors(c: Context,
-                                                                cursors: const Cursor[:]);
-extern "gs_ui_style_set_cursor" fn style_set_cursor(c: Context, cursor: i64) -> bool;
-extern "gs_ui_style_show_cursor" fn style_show_cursor(c: Context);
-extern "gs_ui_style_hide_cursor" fn style_hide_cursor(c: Context);
+extern fn style_load_cursor(c: Context, cursor: i64, image: Cursor) = "gs_ui_style_load_cursor";
+extern fn style_load_all_cursors(c: Context,
+                                 cursors: const Cursor[:]) = "gs_ui_style_load_all_cursors";
+extern fn style_set_cursor(c: Context, cursor: i64) -> bool = "gs_ui_style_set_cursor";
+extern fn style_show_cursor(c: Context) = "gs_ui_style_show_cursor";
+extern fn style_hide_cursor(c: Context) = "gs_ui_style_hide_cursor";
 
 fn style_item_color(color: Color) -> StyleItem {
     StyleItem { kind: STYLE_ITEM_COLOR, color: color }
@@ -1662,30 +1662,30 @@ fn style_item_hide() -> StyleItem { style_item_color(Color { 0, 0, 0, 0 }) }
 // --- colors ------------------------------------------------------------------
 
 // Channels from 0 to 255, or floats from 0 to 1; hsv in the same ranges.
-extern "gs_ui_rgb" fn rgb(r: i64, g: i64, b: i64) -> Color;
-extern "gs_ui_rgba" fn rgba(r: i64, g: i64, b: i64, a: i64) -> Color;
+extern fn rgb(r: i64, g: i64, b: i64) -> Color = "gs_ui_rgb";
+extern fn rgba(r: i64, g: i64, b: i64, a: i64) -> Color = "gs_ui_rgba";
 // 0xAABBGGRR.
-extern "gs_ui_rgba_u32" fn rgba_u32(rgba: u32) -> Color;
-extern "gs_ui_rgb_f" fn rgb_f(r: f32, g: f32, b: f32) -> Color;
-extern "gs_ui_rgba_f" fn rgba_f(r: f32, g: f32, b: f32, a: f32) -> Color;
-extern "gs_ui_rgb_cf" fn rgb_cf(c: Colorf) -> Color;
-extern "gs_ui_rgba_cf" fn rgba_cf(c: Colorf) -> Color;
+extern fn rgba_u32(rgba: u32) -> Color = "gs_ui_rgba_u32";
+extern fn rgb_f(r: f32, g: f32, b: f32) -> Color = "gs_ui_rgb_f";
+extern fn rgba_f(r: f32, g: f32, b: f32, a: f32) -> Color = "gs_ui_rgba_f";
+extern fn rgb_cf(c: Colorf) -> Color = "gs_ui_rgb_cf";
+extern fn rgba_cf(c: Colorf) -> Color = "gs_ui_rgba_cf";
 // "#RRGGBB" and "#RRGGBBAA", the # optional.
-extern "gs_ui_rgb_hex" fn rgb_hex(text: const u8[:]) -> Color;
-extern "gs_ui_rgba_hex" fn rgba_hex(text: const u8[:]) -> Color;
+extern fn rgb_hex(text: const u8[:]) -> Color = "gs_ui_rgb_hex";
+extern fn rgba_hex(text: const u8[:]) -> Color = "gs_ui_rgba_hex";
 // The color darkened by `factor`, from 0 to 1.
-extern "gs_ui_rgb_factor" fn rgb_factor(c: Color, factor: f32) -> Color;
-extern "gs_ui_hsv" fn hsv(h: i64, s: i64, v: i64) -> Color;
-extern "gs_ui_hsva" fn hsva(h: i64, s: i64, v: i64, a: i64) -> Color;
-extern "gs_ui_hsv_f" fn hsv_f(h: f32, s: f32, v: f32) -> Color;
-extern "gs_ui_hsva_f" fn hsva_f(h: f32, s: f32, v: f32, a: f32) -> Color;
-extern "gs_ui_hsva_colorf" fn hsva_colorf(h: f32, s: f32, v: f32, a: f32) -> Colorf;
+extern fn rgb_factor(c: Color, factor: f32) -> Color = "gs_ui_rgb_factor";
+extern fn hsv(h: i64, s: i64, v: i64) -> Color = "gs_ui_hsv";
+extern fn hsva(h: i64, s: i64, v: i64, a: i64) -> Color = "gs_ui_hsva";
+extern fn hsv_f(h: f32, s: f32, v: f32) -> Color = "gs_ui_hsv_f";
+extern fn hsva_f(h: f32, s: f32, v: f32, a: f32) -> Color = "gs_ui_hsva_f";
+extern fn hsva_colorf(h: f32, s: f32, v: f32, a: f32) -> Colorf = "gs_ui_hsva_colorf";
 // Hue, saturation, value and alpha, from 0 to 1.
-extern "gs_ui_colorf_hsva_f" fn colorf_hsva_f(c: Colorf) -> float4;
-extern "gs_ui_color_cf" fn color_cf(c: Color) -> Colorf;
-extern "gs_ui_color_u32" fn color_u32(c: Color) -> u32;
-extern "gs_ui_color_hex_rgba" fn color_hex_rgba_into(c: Color, out: u8[:]) -> i64;
-extern "gs_ui_color_hex_rgb" fn color_hex_rgb_into(c: Color, out: u8[:]) -> i64;
+extern fn colorf_hsva_f(c: Colorf) -> float4 = "gs_ui_colorf_hsva_f";
+extern fn color_cf(c: Color) -> Colorf = "gs_ui_color_cf";
+extern fn color_u32(c: Color) -> u32 = "gs_ui_color_u32";
+extern fn color_hex_rgba_into(c: Color, out: u8[:]) -> i64 = "gs_ui_color_hex_rgba";
+extern fn color_hex_rgb_into(c: Color, out: u8[:]) -> i64 = "gs_ui_color_hex_rgb";
 // "RRGGBBAA" and "RRGGBB".
 fn color_hex_rgba(c: Color) -> u8[>..] {
     var out: u8[>..] = [];
@@ -1699,8 +1699,8 @@ fn color_hex_rgb(c: Color) -> u8[>..] {
     color_hex_rgb_into(c, out);
     return out;
 }
-extern "gs_ui_color_hsv_f" fn color_hsv_f(c: Color) -> float3;
-extern "gs_ui_color_hsva_f" fn color_hsva_f(c: Color) -> float4;
+extern fn color_hsv_f(c: Color) -> float3 = "gs_ui_color_hsv_f";
+extern fn color_hsva_f(c: Color) -> float4 = "gs_ui_color_hsva_f";
 
 // --- images and rectangles ---------------------------------------------------
 
@@ -1738,48 +1738,48 @@ fn get_null_rect() -> Rect { Rect { -8192.0, -8192.0, 16384.0, 16384.0 } }
 // Shapes, images and text drawn straight onto the window being built, in
 // screen coordinates, clipped to push_scissor's rectangle: the way to draw
 // a widget of the program's own at what widget() returned.
-extern "gs_ui_stroke_line" fn stroke_line(c: Context, x0: f32, y0: f32, x1: f32, y1: f32,
-                                          line_thickness: f32, color: Color);
-extern "gs_ui_stroke_curve" fn stroke_curve(c: Context, ax: f32, ay: f32, ctrl0x: f32, ctrl0y: f32,
-                                            ctrl1x: f32, ctrl1y: f32, bx: f32, by: f32,
-                                            line_thickness: f32, color: Color);
-extern "gs_ui_stroke_rect" fn stroke_rect(c: Context, r: Rect, rounding: f32, line_thickness: f32,
-                                          color: Color);
-extern "gs_ui_stroke_circle" fn stroke_circle(c: Context, r: Rect, line_thickness: f32,
-                                              color: Color);
+extern fn stroke_line(c: Context, x0: f32, y0: f32, x1: f32, y1: f32,
+                      line_thickness: f32, color: Color) = "gs_ui_stroke_line";
+extern fn stroke_curve(c: Context, ax: f32, ay: f32, ctrl0x: f32, ctrl0y: f32,
+                       ctrl1x: f32, ctrl1y: f32, bx: f32, by: f32,
+                       line_thickness: f32, color: Color) = "gs_ui_stroke_curve";
+extern fn stroke_rect(c: Context, r: Rect, rounding: f32, line_thickness: f32,
+                      color: Color) = "gs_ui_stroke_rect";
+extern fn stroke_circle(c: Context, r: Rect, line_thickness: f32,
+                        color: Color) = "gs_ui_stroke_circle";
 // Angles in radians.
-extern "gs_ui_stroke_arc" fn stroke_arc(c: Context, cx: f32, cy: f32, radius: f32, a_min: f32,
-                                        a_max: f32, line_thickness: f32, color: Color);
-extern "gs_ui_stroke_triangle" fn stroke_triangle(c: Context, x0: f32, y0: f32, x1: f32, y1: f32,
-                                                  x2: f32, y2: f32, line_thickness: f32,
-                                                  color: Color);
-extern "gs_ui_stroke_polyline" fn stroke_polyline(c: Context, points: const float2[:],
-                                                  line_thickness: f32, color: Color);
-extern "gs_ui_stroke_polygon" fn stroke_polygon(c: Context, points: const float2[:],
-                                                line_thickness: f32, color: Color);
-extern "gs_ui_fill_rect" fn fill_rect(c: Context, r: Rect, rounding: f32, color: Color);
-extern "gs_ui_fill_rect_multi_color" fn fill_rect_multi_color(c: Context, r: Rect, left: Color,
-                                                              top: Color, right: Color,
-                                                              bottom: Color);
-extern "gs_ui_fill_circle" fn fill_circle(c: Context, r: Rect, color: Color);
-extern "gs_ui_fill_arc" fn fill_arc(c: Context, cx: f32, cy: f32, radius: f32, a_min: f32,
-                                    a_max: f32, color: Color);
-extern "gs_ui_fill_triangle" fn fill_triangle(c: Context, x0: f32, y0: f32, x1: f32, y1: f32,
-                                              x2: f32, y2: f32, color: Color);
-extern "gs_ui_fill_polygon" fn fill_polygon(c: Context, points: const float2[:], color: Color);
-extern "gs_ui_draw_image" fn draw_image(c: Context, r: Rect, img: Image, color: Color);
-extern "gs_ui_draw_nine_slice" fn draw_nine_slice(c: Context, r: Rect, slice: NineSlice,
-                                                  color: Color);
-extern "gs_ui_draw_text" fn draw_text(c: Context, r: Rect, text: const u8[:], font: Font,
-                                      background: Color, foreground: Color);
-extern "gs_ui_push_scissor" fn push_scissor(c: Context, r: Rect);
+extern fn stroke_arc(c: Context, cx: f32, cy: f32, radius: f32, a_min: f32,
+                     a_max: f32, line_thickness: f32, color: Color) = "gs_ui_stroke_arc";
+extern fn stroke_triangle(c: Context, x0: f32, y0: f32, x1: f32, y1: f32,
+                          x2: f32, y2: f32, line_thickness: f32,
+                          color: Color) = "gs_ui_stroke_triangle";
+extern fn stroke_polyline(c: Context, points: const float2[:],
+                          line_thickness: f32, color: Color) = "gs_ui_stroke_polyline";
+extern fn stroke_polygon(c: Context, points: const float2[:],
+                         line_thickness: f32, color: Color) = "gs_ui_stroke_polygon";
+extern fn fill_rect(c: Context, r: Rect, rounding: f32, color: Color) = "gs_ui_fill_rect";
+extern fn fill_rect_multi_color(c: Context, r: Rect, left: Color,
+                                top: Color, right: Color,
+                                bottom: Color) = "gs_ui_fill_rect_multi_color";
+extern fn fill_circle(c: Context, r: Rect, color: Color) = "gs_ui_fill_circle";
+extern fn fill_arc(c: Context, cx: f32, cy: f32, radius: f32, a_min: f32,
+                   a_max: f32, color: Color) = "gs_ui_fill_arc";
+extern fn fill_triangle(c: Context, x0: f32, y0: f32, x1: f32, y1: f32,
+                        x2: f32, y2: f32, color: Color) = "gs_ui_fill_triangle";
+extern fn fill_polygon(c: Context, points: const float2[:], color: Color) = "gs_ui_fill_polygon";
+extern fn draw_image(c: Context, r: Rect, img: Image, color: Color) = "gs_ui_draw_image";
+extern fn draw_nine_slice(c: Context, r: Rect, slice: NineSlice,
+                          color: Color) = "gs_ui_draw_nine_slice";
+extern fn draw_text(c: Context, r: Rect, text: const u8[:], font: Font,
+                    background: Color, foreground: Color) = "gs_ui_draw_text";
+extern fn push_scissor(c: Context, r: Rect) = "gs_ui_push_scissor";
 
 // --- utilities ---------------------------------------------------------------
 
-extern "gs_ui_murmur_hash" fn murmur_hash(key: const u8[:], seed: u32) -> u32;
-extern "gs_ui_triangle_from_direction" fn triangle_from_direction_into(r: Rect, pad_x: f32,
-                                                                       pad_y: f32, direction: i64,
-                                                                       out: float2[:]);
+extern fn murmur_hash(key: const u8[:], seed: u32) -> u32 = "gs_ui_murmur_hash";
+extern fn triangle_from_direction_into(r: Rect, pad_x: f32,
+                                       pad_y: f32, direction: i64,
+                                       out: float2[:]) = "gs_ui_triangle_from_direction";
 // The triangle pointing `direction` (UP, RIGHT, DOWN, LEFT) in `r`.
 fn triangle_from_direction(r: Rect, pad_x: f32, pad_y: f32, direction: i64) -> float2[3] {
     var out: float2[3] = [float2 { 0.0, 0.0 }; 3];
@@ -1788,10 +1788,10 @@ fn triangle_from_direction(r: Rect, pad_x: f32, pad_y: f32, direction: i64) -> f
 }
 // Whether `text` matches Nuklear's small patterns: ^ and $ anchor, . is any
 // character, c* any run of c.
-extern "gs_ui_strfilter" fn strfilter(text: const u8[:], regexp: const u8[:]) -> bool;
-extern "gs_ui_strmatch_fuzzy_text" fn strmatch_fuzzy_text_into(text: const u8[:],
-                                                               pattern: const u8[:],
-                                                               score: i64&) -> bool;
+extern fn strfilter(text: const u8[:], regexp: const u8[:]) -> bool = "gs_ui_strfilter";
+extern fn strmatch_fuzzy_text_into(text: const u8[:],
+                                   pattern: const u8[:],
+                                   score: i64&) -> bool = "gs_ui_strmatch_fuzzy_text";
 // Whether `pattern`'s characters appear in `text` in order, and how well
 // (higher is better), for a search box.
 fn strmatch_fuzzy_text(text: const u8[:], pattern: const u8[:]) -> bool, i64 {
