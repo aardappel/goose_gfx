@@ -442,6 +442,7 @@ void gs_gfx_close(void) {
         SDL_WaitForGPUIdle(gfx.dev);
         gfx_release_pipelines();
         gfx_release_resources();
+        gfx_staging_close();
         if (gfx.window) SDL_ReleaseWindowFromGPUDevice(gfx.dev, gfx.window);
         SDL_DestroyGPUDevice(gfx.dev);
     }
