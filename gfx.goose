@@ -386,6 +386,16 @@ fn screen_size() -> int2 {
     screen_size_into(size);
     size
 }
+// The screen's pixels to each unit of the window's own coordinates: 2 on most
+// high-density displays, 1 elsewhere, including Windows at any scale setting.
+extern fn pixel_density() -> f32 = "gs_gfx_pixel_density";
+// The pixel density times the system's content scale: what the system draws
+// its own text and controls at, 2 on a high-density Mac, 1.5 on Windows set to
+// 150%. Reported, never applied: the window and the screen stay as they are,
+// and it is up to the program whether to use it, as with ui::set_scale.
+// Both change as the window moves between displays; read them each frame to
+// follow it. 1 headless and with no window open.
+extern fn display_scale() -> f32 = "gs_gfx_display_scale";
 
 extern fn time() -> f64 = "gs_gfx_time";               // seconds since open
 extern fn delta_time() -> f64 = "gs_gfx_delta_time";   // seconds the last frame took

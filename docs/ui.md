@@ -260,8 +260,6 @@ lavapipe; the rest pass, the layer's allocations included.
   them on every call, so only `edit_buffer`'s text editors keep history.
 * Custom text filters, and fonts measured by the program, which need a way
   for C to call a Goose function.
-* The display's content scale from gfx (SDL has it), for a program that
-  wants its ui sized as the system's own.
 * Mouse wheel and double-click injection in gfx, for tests of the rest of
   `input_from_gfx`.
 * A property being typed into marks its window's text field focus

@@ -129,6 +129,8 @@ typedef struct {
     X(uint8_t, gs_gfx_fullscreen, (void)) \
     X(void, gs_gfx_maximize, (void)) \
     X(void, gs_gfx_screen_size, (gs_gfx_int2 *out)) \
+    X(float, gs_gfx_pixel_density, (void)) \
+    X(float, gs_gfx_display_scale, (void)) \
     X(gs_gfx_texture, gs_gfx_screen, (void)) \
     X(gs_gfx_texture, gs_gfx_screen_depth, (void)) \
     X(double, gs_gfx_time, (void)) \

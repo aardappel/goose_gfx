@@ -19,6 +19,8 @@ static void check(bool ok, const char *what) {
 int main(void) {
     /* Keep SDL alive after gfx closes, so cursor cleanup can be inspected. */
     if (!SDL_Init(SDL_INIT_VIDEO)) return 1;
+    check(gs_gfx_pixel_density() == 1 && gs_gfx_display_scale() == 1,
+          "scales are 1 before any window");
     gs_gfx_bytes title = { (uint8_t *)"Goose input regression", 22 };
     if (!gs_gfx_open(title, 64, 48, GS_GFX_WINDOW_HIDDEN)) {
         uint8_t why[1024] = { 0 };
@@ -42,6 +44,17 @@ int main(void) {
     SDL_WindowID id = SDL_GetWindowID(window);
     gs_gfx_frame();
     check(!gs_gfx_focused(), "a hidden window starts without focus");
+
+    int window_w = 0, window_h = 0;
+    SDL_GetWindowSize(window, &window_w, &window_h);
+    gs_gfx_int2 screen;
+    gs_gfx_screen_size(&screen);
+    check(gs_gfx_pixel_density() == (float)screen.x / window_w,
+          "pixel density is the screen's pixels per window coordinate");
+    check(gs_gfx_display_scale() == SDL_GetWindowDisplayScale(window) &&
+          gs_gfx_display_scale() > 0, "display scale is SDL's");
+    check(window_w == 64 && window_h == 48, "the scales do not size the window");
+
     check(!gs_gfx_set_mouse_relative(true), "capture without focus is rejected");
 
     check(gs_gfx_set_cursor(GS_GFX_CURSOR_POINTER), "select the pointer cursor");
@@ -114,7 +127,11 @@ int main(void) {
     check(SDL_CursorVisible(), "close restores cursor visibility");
     check(SDL_GetCursor() == SDL_GetDefaultCursor(), "close restores the default cursor");
 
+    check(gs_gfx_pixel_density() == 1 && gs_gfx_display_scale() == 1,
+          "scales are 1 after close");
     check(gs_gfx_open_headless(16, 16, 0), "reopen headless after releasing cursors");
+    check(gs_gfx_pixel_density() == 1 && gs_gfx_display_scale() == 1,
+          "scales are 1 headless");
     SDL_Cursor *before = SDL_GetCursor();
     for (int64_t shape = GS_GFX_CURSOR_DEFAULT; shape <= GS_GFX_CURSOR_W_RESIZE; shape++)
         check(gs_gfx_set_cursor(shape), "headless accepts each supported shape");
