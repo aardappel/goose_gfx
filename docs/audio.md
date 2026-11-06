@@ -26,6 +26,14 @@ frame. Mono duplicates into stereo. Pan attenuates the opposite side. All voices
 sum into stereo f32 and the result clips to `[-1, 1]`. This is deliberately a
 sound-effects mixer, not a band-limited music resampler or an effects engine.
 
+`seek` sets the source position under the stream lock; past the end it wraps a
+looping voice and holds any other at its last frame. `voice_position` reports
+what is heard rather than what is mixed: the source position less the frames
+queued in the stream and the device's buffer, scaled by the voice's step, plus
+the time since the last callback, at most what that callback mixed, which
+smooths it between callbacks. Offline there is nothing in between, so it is the
+source position itself.
+
 `open` initializes only SDL's audio subsystem and opens a stereo f32 stream to
 the default playback device. SDL performs the conversion to the physical device
 format. Its get callback fills requests in blocks of at most 256 frames. The
