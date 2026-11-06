@@ -278,6 +278,18 @@ void gs_gfx_screen_size(gs_gfx_int2 *out) {
     out->y = gfx.height;
 }
 
+/* What SDL says of the window, for the program to use as it likes: gfx itself
+   scales nothing by these. 1 without a window, as headless. */
+float gs_gfx_pixel_density(void) {
+    float density = gfx.window ? SDL_GetWindowPixelDensity(gfx.window) : 0;
+    return density > 0 ? density : 1;
+}
+
+float gs_gfx_display_scale(void) {
+    float scale = gfx.window ? SDL_GetWindowDisplayScale(gfx.window) : 0;
+    return scale > 0 ? scale : 1;
+}
+
 /* --- open and close -------------------------------------------------------- */
 
 uint8_t gs_gfx_available(void) { return 1; }

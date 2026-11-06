@@ -149,6 +149,12 @@ fields in the same order, and the same constant values.
   positions and motion are multiplied by the window's size in pixels and
   divided by its size in those coordinates, in double, so a whole pixel
   comes out whole. Injected mouse input is in pixels already.
+* **Scale belongs to the program.** `pixel_density()` and `display_scale()`
+  report what SDL says of the window, and nothing in gfx or ui acts on them:
+  the distance a screen is viewed from varies too much for a reported scale
+  to say how big a ui should be, and many games size theirs by the height of
+  the screen instead. A program that does want the system's size passes
+  `display_scale()` to `ui::set_scale`.
 * **First-person input** uses SDL's per-window relative mouse mode. Turning
   it on hides the cursor and gives continuous pixel deltas. Focus changes
   are ordered events as well as a query. Focus loss clears held input and
