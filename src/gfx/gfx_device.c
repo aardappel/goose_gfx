@@ -355,14 +355,19 @@ static bool gfx_start(bool windowed, gs_gfx_bytes title, int64_t width, int64_t 
     gfx_init_tables();
     SDL_SetAssertionHandler(gfx_assert_handler, NULL);
     SDL_SetHint(SDL_HINT_APP_NAME, "Goose");
-    if (!SDL_InitSubSystem(SDL_INIT_VIDEO)) {
-        if (windowed) return gfx_sdl_fail("initializing SDL video");
-        /* With no display to open a window on, the offscreen video driver
-           still gives SDL_GPU the video device it requires. */
+    if (windowed) {
+        if (!SDL_InitSubSystem(SDL_INIT_VIDEO)) return gfx_sdl_fail("initializing SDL video");
+    } else {
+        /* Headless needs no display: the offscreen video driver gives
+           SDL_GPU the video device it requires without trying the display
+           servers first, which can take a minute and more to fail (WSL's
+           X server, unreachable, does). SDL_VIDEO_DRIVER in the environment
+           still overrides the hint; and if offscreen is not built in, the
+           default drivers are tried. */
         SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "offscreen");
         bool ok = SDL_InitSubSystem(SDL_INIT_VIDEO);
         SDL_ResetHint(SDL_HINT_VIDEO_DRIVER);
-        if (!ok) return gfx_sdl_fail("initializing SDL video");
+        if (!ok && !SDL_InitSubSystem(SDL_INIT_VIDEO)) return gfx_sdl_fail("initializing SDL video");
     }
     gfx.video_inited = true;
     /* No gamepad subsystem is no gamepads, not a failure. */
