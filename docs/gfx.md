@@ -170,6 +170,15 @@ fields in the same order, and the same constant values.
   `error()`. It leaves visibility and relative mode unchanged. Headless calls
   validate the shape without touching the desktop cursor. `close()` restores
   the default cursor and releases cached shapes.
+* **Gamepads** take the slots `0` to `MAX_GAMEPADS - 1` in the order they
+  connect. SDL's gamepad subsystem is opened with video, and a machine without
+  one has no gamepads rather than a failed `open`. Buttons are kept from SDL's
+  events as held state plus the latest `frame()`'s edges, as keys are, and a
+  pad that disconnects releases what it held. Axes and rumble go straight to
+  SDL, with no deadzone.
+* **Fullscreen** is borderless, at the desktop's resolution, and SDL changes it
+  asynchronously: `fullscreen()` can lag a frame or two behind
+  `set_fullscreen`, and the screen follows the window as with any resize.
 * **Pipelines are created for their render targets.** A pipeline description
   does not name its targets. The layer creates a pipeline on first use with
   each combination of color formats, depth format, and sample count.
@@ -182,6 +191,15 @@ fields in the same order, and the same constant values.
   is recorded in the frame's command buffer, and so happens between passes. A
   rewrite of a whole buffer lets SDL cycle it rather than wait for a draw still
   using it. Readback submits and waits.
+* **Small uploads share one buffer.** Creating and releasing a transfer buffer
+  costs a tenth of a millisecond or more each time on Direct3D 12, so uploads
+  up to 4 MB are packed one after another into a 4 MB buffer kept for the
+  device's life. Each takes the next free region, mapped without cycling, since
+  nothing pending reads a region not yet handed out. When the next doesn't fit,
+  the buffer is mapped with cycling and filling starts again at 0. Texture
+  uploads start on a 512-byte boundary, Direct3D 12's placement alignment
+  (otherwise SDL copies the data again), and buffer uploads on a 16-byte one.
+  Larger uploads get a buffer of their own.
 * **Shaders**: the device takes SPIR-V where it can, else DXBC, else MSL. DXBC
   is the blob's HLSL compiled at load time by `d3dcompiler_47.dll`, which ships
   with Windows 10 and 11, loaded by name. Each SDL shader is made once per blob.
@@ -279,7 +297,7 @@ are all unverified until CI or a Mac runs them.
   function's slice parameter produces invalid C at `-O1`/`-O2` (bind it to a
   local first); and a struct field's default cannot name a global constant
   (the gfx descriptions spell their defaults as numbers).
-* **API**: gamepads and audio (SDL has them all), indirect draws,
+* **API**: indirect draws,
   stencil, blend constants, debug labels, a `Region` for readback of depth
   textures (SDL_GPU cannot download one directly), checking uniform block
   member offsets rather than size alone, and readback forms that return a
