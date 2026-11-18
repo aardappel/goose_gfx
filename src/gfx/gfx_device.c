@@ -409,8 +409,10 @@ static bool gfx_start(bool windowed, gs_gfx_bytes title, int64_t width, int64_t 
             return false;
         }
         if (flags & GS_GFX_NO_VSYNC) {
-            SDL_GPUPresentMode modes[] = { SDL_GPU_PRESENTMODE_MAILBOX,
-                                           SDL_GPU_PRESENTMODE_IMMEDIATE };
+            /* Immediate first: full screen, NVIDIA's Vulkan driver holds mailbox
+               to the display's refresh. */
+            SDL_GPUPresentMode modes[] = { SDL_GPU_PRESENTMODE_IMMEDIATE,
+                                           SDL_GPU_PRESENTMODE_MAILBOX };
             for (int i = 0; i < 2; i++) {
                 if (SDL_WindowSupportsGPUPresentMode(gfx.dev, gfx.window, modes[i])) {
                     SDL_SetGPUSwapchainParameters(gfx.dev, gfx.window,
