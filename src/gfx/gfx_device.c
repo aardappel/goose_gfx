@@ -363,8 +363,12 @@ static bool gfx_start(bool windowed, gs_gfx_bytes title, int64_t width, int64_t 
            servers first, which can take a minute and more to fail (WSL's
            X server, unreachable, does). SDL_VIDEO_DRIVER in the environment
            still overrides the hint; and if offscreen is not built in, the
-           default drivers are tried. */
+           default drivers are tried. Not on Apple's systems: SDL_GPU's
+           Metal backend needs a video driver that makes Metal views, which
+           offscreen doesn't, and Cocoa starts at once without a display. */
+#ifndef SDL_PLATFORM_APPLE
         SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "offscreen");
+#endif
         bool ok = SDL_InitSubSystem(SDL_INIT_VIDEO);
         SDL_ResetHint(SDL_HINT_VIDEO_DRIVER);
         if (!ok && !SDL_InitSubSystem(SDL_INIT_VIDEO)) return gfx_sdl_fail("initializing SDL video");

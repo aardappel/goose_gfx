@@ -273,7 +273,10 @@ which gives the Vulkan backend what it needs without a display: the
 `test/gfx/` programs run unchanged on Linux with no display at all (the CI
 runner's case). It does not try the display servers first: in WSL, with
 `DISPLAY` set and WSLg's X server not answering, SDL's X11 driver took 86
-seconds to fail before the fallback, on every program. Nothing on macOS has
+seconds to fail before the fallback, on every program. On Apple's systems
+headless uses the default driver (Cocoa), which starts at once without a
+display: SDL_GPU's Metal backend needs a video driver that makes Metal
+views, which the offscreen driver doesn't. Nothing else on macOS has
 run: the MSL that cute_spirv emits, SDL's Metal backend under this layer,
 the framework list in `link-cc.rsp`, and TinyCC's arm64 calls into the layer
 are all unverified until CI or a Mac runs them.
