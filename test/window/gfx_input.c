@@ -127,6 +127,38 @@ static void wait_checks(void) {
     gs_gfx_close();
 }
 
+/* WINDOW_ONLY: a window and no device, its native handle for another renderer,
+   and with WAIT_WHEN_IDLE the wait following what the renderer says it showed. */
+static void window_only_checks(void) {
+    gs_gfx_bytes title = { (uint8_t *)"Goose window only", 17 };
+    check(gs_gfx_open(title, 64, 48, GS_GFX_WINDOW_HIDDEN | GS_GFX_WINDOW_ONLY | GS_GFX_WAIT_WHEN_IDLE),
+          "open WINDOW_ONLY");
+    check(gs_gfx_native_window() != 0, "WINDOW_ONLY gives the native window");
+    int n = 0;
+    SDL_Window **windows = SDL_GetWindows(&n);
+    SDL_Window *window = n == 1 ? windows[0] : NULL;
+    SDL_free(windows);
+    check(window != NULL, "WINDOW_ONLY opens one window");
+    int pw = 0, ph = 0;
+    if (window) SDL_GetWindowSizeInPixels(window, &pw, &ph);
+    gs_gfx_int2 screen;
+    gs_gfx_screen_size(&screen);
+    check(screen.x == pw && screen.y == ph, "the screen size is the window's in pixels");
+    check(gs_gfx_set_cursor(GS_GFX_CURSOR_POINTER), "WINDOW_ONLY sets the cursor");
+    gs_gfx_frame();
+    check(idles(), "a frame the renderer showed nothing in waits");
+    check(!gs_gfx_needs_present(), "nothing to present after the wait");
+    gs_gfx_presented(1);
+    check(timed_frame() < 500, "a frame the renderer showed doesn't wait");
+    gs_gfx_bytes key = { (uint8_t *)"A", 1 };
+    gs_gfx_inject_focus(true);
+    gs_gfx_inject_key(key, true);
+    gs_gfx_frame();
+    check(gs_gfx_focused() && gs_gfx_key_pressed(key), "input reaches WINDOW_ONLY");
+    gs_gfx_close();
+    check(gs_gfx_native_window() == 0, "no native window after close");
+}
+
 int main(void) {
     /* Keep SDL alive after gfx closes, so cursor cleanup can be inspected. */
     if (!SDL_Init(SDL_INIT_VIDEO)) return 1;
@@ -247,6 +279,7 @@ int main(void) {
     check(gs_gfx_pixel_density() == 1 && gs_gfx_display_scale() == 1,
           "scales are 1 after close");
     wait_checks();
+    window_only_checks();
     check(gs_gfx_open_headless(16, 16, 0), "reopen headless after releasing cursors");
     check(gs_gfx_pixel_density() == 1 && gs_gfx_display_scale() == 1,
           "scales are 1 headless");

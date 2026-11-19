@@ -6,6 +6,10 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
+#ifdef SDL_PLATFORM_APPLE
+#include <SDL3/SDL_metal.h>
+#endif
+
 gfx_state gfx;
 
 /* How many times gfx was opened, which close() leaves: handles from an
@@ -52,6 +56,12 @@ bool gfx_sdl_fail(const char *what) {
 
 bool gfx_need_device(const char *what) {
     if (gfx.dev) return true;
+    if (gfx.window_only) return gfx_misuse("%s: gfx is open WINDOW_ONLY, with no device", what);
+    return gfx_misuse("%s: gfx is not open (call gfx::open or gfx::open_headless first)", what);
+}
+
+bool gfx_need_open(const char *what) {
+    if (gfx.dev || gfx.window_only) return true;
     return gfx_misuse("%s: gfx is not open (call gfx::open or gfx::open_headless first)", what);
 }
 
@@ -371,9 +381,106 @@ static void gfx_seed_mouse(void) {
     gfx.mouse_y = gfx_to_pixels(gy - (float)wy, gfx.window_ph, gfx.window_h);
 }
 
+/* WINDOW_ONLY's open: the window and its native handle, and no device. */
+static bool gfx_start_window_only(bool windowed, gs_gfx_bytes title, int64_t width,
+                                  int64_t height, int64_t flags) {
+    gfx.window_only = true;
+    gfx.width = (int)width;
+    gfx.height = (int)height;
+    gfx.window_w = gfx.window_h = gfx.window_pw = gfx.window_ph = 1;
+    if (windowed) {
+        char buf[512];
+        SDL_WindowFlags wf = SDL_WINDOW_HIGH_PIXEL_DENSITY;
+        if (flags & GS_GFX_WINDOW_RESIZABLE) wf |= SDL_WINDOW_RESIZABLE;
+        if (flags & GS_GFX_WINDOW_HIDDEN) wf |= SDL_WINDOW_HIDDEN;
+        if (flags & GS_GFX_WINDOW_FULLSCREEN) wf |= SDL_WINDOW_FULLSCREEN;
+#ifdef SDL_PLATFORM_APPLE
+        wf |= SDL_WINDOW_METAL;
+#endif
+        gfx.window = SDL_CreateWindow(gfx_cstr(title, buf, sizeof buf), (int)width, (int)height, wf);
+        if (!gfx.window) {
+            gfx_sdl_fail("creating the window");
+            gs_gfx_close();
+            return false;
+        }
+#ifdef SDL_PLATFORM_APPLE
+        gfx.metal_view = SDL_Metal_CreateView(gfx.window);
+        gfx.native = gfx.metal_view ? SDL_Metal_GetLayer(gfx.metal_view) : NULL;
+#elif defined(SDL_PLATFORM_WINDOWS)
+        gfx.native = SDL_GetPointerProperty(SDL_GetWindowProperties(gfx.window),
+                                            SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
+#elif defined(SDL_PLATFORM_ANDROID)
+        gfx.native = SDL_GetPointerProperty(SDL_GetWindowProperties(gfx.window),
+                                            SDL_PROP_WINDOW_ANDROID_WINDOW_POINTER, NULL);
+#elif defined(SDL_PLATFORM_LINUX)
+        SDL_PropertiesID props = SDL_GetWindowProperties(gfx.window);
+        const char *driver = SDL_GetCurrentVideoDriver();
+        if (SDL_strcmp(driver, "wayland") == 0) {
+            gfx.native_kind = GS_GFX_NATIVE_WAYLAND;
+            gfx.native_display = SDL_GetPointerProperty(props, SDL_PROP_WINDOW_WAYLAND_DISPLAY_POINTER, NULL);
+            gfx.native = SDL_GetPointerProperty(props, SDL_PROP_WINDOW_WAYLAND_SURFACE_POINTER, NULL);
+        } else if (SDL_strcmp(driver, "x11") == 0) {
+            gfx.native_kind = GS_GFX_NATIVE_X11;
+            gfx.native_display = SDL_GetPointerProperty(props, SDL_PROP_WINDOW_X11_DISPLAY_POINTER, NULL);
+            gfx.native = (void *)(uintptr_t)SDL_GetNumberProperty(props, SDL_PROP_WINDOW_X11_WINDOW_NUMBER, 0);
+        } else {
+            gfx_fail("WINDOW_ONLY: SDL's %s video driver gives no native window", driver);
+            gs_gfx_close();
+            return false;
+        }
+        if (!gfx.native_display) gfx.native = NULL;
+#else
+        gfx_fail("WINDOW_ONLY: no native window on this platform");
+        gs_gfx_close();
+        return false;
+#endif
+        if (!gfx.native) {
+            gfx_sdl_fail("getting the window's native handle");
+            gs_gfx_close();
+            return false;
+        }
+        SDL_GetWindowSizeInPixels(gfx.window, &gfx.width, &gfx.height);
+        gfx_update_input_scale();
+        gfx_seed_mouse();
+    }
+    gfx.focused = !gfx.window || (SDL_GetWindowFlags(gfx.window) & SDL_WINDOW_INPUT_FOCUS) != 0;
+    gfx.cursor_visible = true;
+    if (gfx.window) SDL_ShowCursor();
+    gfx.start_ns = gfx.last_ns = SDL_GetTicksNS();
+    gfx.inject_event = SDL_RegisterEvents(1);
+    gfx_opens++;
+    return true;
+}
+
+uint64_t gs_gfx_native_window(void) {
+#ifdef SDL_PLATFORM_ANDROID
+    /* SDL frees the ANativeWindow when the app goes to the background and
+       makes a new one when it comes back, so read it each time. */
+    if (gfx.window)
+        return (uint64_t)(uintptr_t)SDL_GetPointerProperty(
+            SDL_GetWindowProperties(gfx.window), SDL_PROP_WINDOW_ANDROID_WINDOW_POINTER, NULL);
+#endif
+    return (uint64_t)(uintptr_t)gfx.native;
+}
+
+uint64_t gs_gfx_native_display(void) { return (uint64_t)(uintptr_t)gfx.native_display; }
+
+int64_t gs_gfx_native_kind(void) { return gfx.native_kind; }
+
+void gs_gfx_presented(uint8_t shown) {
+    if (!gfx.window_only) {
+        gfx_misuse("presented: only for WINDOW_ONLY, whose renderer presents itself");
+        return;
+    }
+    gfx.presented = shown != 0;
+    if (shown) gfx.expose = 0;
+}
+
+uint8_t gs_gfx_needs_present(void) { return gfx.expose > 0; }
+
 static bool gfx_start(bool windowed, gs_gfx_bytes title, int64_t width, int64_t height,
                       int64_t flags) {
-    if (gfx.dev) return gfx_misuse("gfx is already open: close() it first");
+    if (gfx.dev || gfx.window_only) return gfx_misuse("gfx is already open: close() it first");
     /* A windowed program run by a test runner draws off screen instead. */
     const char *headless = SDL_getenv("GOOSE_GFX_HEADLESS");
     if (headless && SDL_atoi(headless)) windowed = false;
@@ -415,6 +522,7 @@ static bool gfx_start(bool windowed, gs_gfx_bytes title, int64_t width, int64_t 
     if (flags & GS_GFX_WAIT_WHEN_IDLE) SDL_SetHint(SDL_HINT_AUTO_UPDATE_JOYSTICKS, "0");
     /* No gamepad subsystem is no gamepads, not a failure. */
     gfx.gamepad_inited = SDL_InitSubSystem(SDL_INIT_GAMEPAD);
+    if (flags & GS_GFX_WINDOW_ONLY) return gfx_start_window_only(windowed, title, width, height, flags);
     SDL_GPUShaderFormat formats = SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_MSL;
     if (gfx_have_dxbc()) formats |= SDL_GPU_SHADERFORMAT_DXBC;
 #ifdef NDEBUG
@@ -533,6 +641,9 @@ void gs_gfx_close(void) {
         SDL_SetWindowRelativeMouseMode(gfx.window, false);
         SDL_ShowCursor();
         SDL_SetCursor(SDL_GetDefaultCursor());
+#ifdef SDL_PLATFORM_APPLE
+        if (gfx.metal_view) SDL_Metal_DestroyView(gfx.metal_view);
+#endif
         SDL_DestroyWindow(gfx.window);
     }
     for (int i = 0; i < SDL_SYSTEM_CURSOR_COUNT; i++)
@@ -834,7 +945,7 @@ static bool gfx_own_window(const SDL_Event *e) {
 }
 
 uint8_t gs_gfx_frame(void) {
-    if (!gfx_need_device("frame")) return 0;
+    if (!gfx_need_open("frame")) return 0;
     if (gfx.pass || gfx.cpass) {
         gfx_misuse("frame() inside a %s pass: end the pass first", gfx.pass ? "render" : "compute");
         return 0;
@@ -842,12 +953,19 @@ uint8_t gs_gfx_frame(void) {
     if (gfx.lost) return 0;
     /* The first call starts the first frame; every later one ends one. With
        WAIT_WHEN_IDLE a frame that drew nothing isn't presented, and the next one
-       waits for an event, up to GFX_IDLE_WAIT_MS so a program's timers still run. */
+       waits for an event, up to GFX_IDLE_WAIT_MS so a program's timers still run.
+       WINDOW_ONLY's renderer presents itself and says whether it did. */
     bool on_demand = (gfx.flags & GS_GFX_WAIT_WHEN_IDLE) != 0;
     bool work = gfx.gpu_work;           /* before the present's own blit */
-    bool drew = !on_demand || work || gfx.expose > 0 || gfx.unshown;
+    bool presented = gfx.presented;
+    bool drew = !on_demand || (gfx.window_only ? presented : work || gfx.expose > 0 || gfx.unshown);
     bool shown = drew;
-    if (gfx.window && gfx.frames > 0 && drew) {
+    gfx.presented = false;
+    if (gfx.window_only) {
+        /* needs_present() stays true a few frames after an expose, as gfx
+           retries its own present, with WAIT_WHEN_IDLE or without. */
+        if (!presented && gfx.expose > 0) gfx.expose--;
+    } else if (gfx.window && gfx.frames > 0 && drew) {
         /* No image: Android recreates the surface on resume, so retry for a few
            frames, then at each idle wakeup until one comes. */
         shown = gfx_present();
@@ -856,7 +974,7 @@ uint8_t gs_gfx_frame(void) {
         else if (work) gfx.expose = GFX_PRESENT_TRIES;
         else if (gfx.expose > 0) gfx.expose--;
     }
-    gfx_submit();
+    if (gfx.dev) gfx_submit();
     gfx.gpu_work = false;
     if (on_demand && gfx.window && gfx.frames > 0 && !shown && gfx.expose <= 0 && !gfx.quit) {
         bool pads = false;
@@ -977,7 +1095,14 @@ uint8_t gs_gfx_frame(void) {
     if (resized && gfx.window) {
         int w = 0, h = 0;
         SDL_GetWindowSizeInPixels(gfx.window, &w, &h);
-        if (w > 0 && h > 0 && (w != gfx.width || h != gfx.height)) gfx_create_screen(w, h);
+        if (w > 0 && h > 0 && (w != gfx.width || h != gfx.height)) {
+            if (gfx.window_only) {
+                gfx.width = w;
+                gfx.height = h;
+            } else {
+                gfx_create_screen(w, h);
+            }
+        }
     }
     uint64_t now = SDL_GetTicksNS();
     gfx.delta = (double)(now - gfx.last_ns) / 1e9;
@@ -987,7 +1112,7 @@ uint8_t gs_gfx_frame(void) {
 }
 
 double gs_gfx_time(void) {
-    return gfx.dev ? (double)(SDL_GetTicksNS() - gfx.start_ns) / 1e9 : 0.0;
+    return gfx.dev || gfx.window_only ? (double)(SDL_GetTicksNS() - gfx.start_ns) / 1e9 : 0.0;
 }
 
 double gs_gfx_delta_time(void) { return gfx.delta; }
@@ -1087,7 +1212,7 @@ uint8_t gs_gfx_mouse_relative(void) { return gfx.mouse_relative; }
 uint8_t gs_gfx_cursor_visible(void) { return gfx.cursor_visible && !gfx.mouse_relative; }
 
 uint8_t gs_gfx_set_mouse_relative(uint8_t on) {
-    if (!gfx_need_device("set_mouse_relative")) return 0;
+    if (!gfx_need_open("set_mouse_relative")) return 0;
     bool enabled = on != 0;
     if (enabled && !gfx.focused) return gfx_fail("set_mouse_relative: the window is not focused");
     if (gfx.mouse_relative == enabled) return 1;
@@ -1108,7 +1233,7 @@ uint8_t gs_gfx_set_mouse_relative(uint8_t on) {
 }
 
 uint8_t gs_gfx_set_cursor(int64_t shape) {
-    if (!gfx_need_device("set_cursor")) return 0;
+    if (!gfx_need_open("set_cursor")) return 0;
     if (shape < GS_GFX_CURSOR_DEFAULT || shape > GS_GFX_CURSOR_W_RESIZE)
         return gfx_fail("set_cursor: invalid system cursor %lld", (long long)shape);
     if (!gfx.window) return 1;
@@ -1122,7 +1247,7 @@ uint8_t gs_gfx_set_cursor(int64_t shape) {
 }
 
 uint8_t gs_gfx_set_cursor_visible(uint8_t visible) {
-    if (!gfx_need_device("set_cursor_visible")) return 0;
+    if (!gfx_need_open("set_cursor_visible")) return 0;
     bool show = visible != 0;
     if (!show && !gfx.focused) return gfx_fail("set_cursor_visible: the window is not focused");
     if (gfx.window && !gfx.mouse_relative) {
@@ -1134,7 +1259,7 @@ uint8_t gs_gfx_set_cursor_visible(uint8_t visible) {
 }
 
 uint8_t gs_gfx_inject_focus(uint8_t focused) {
-    if (!gfx_need_device("inject_focus")) return 0;
+    if (!gfx_need_open("inject_focus")) return 0;
     SDL_Event e;
     SDL_zero(e);
     e.type = focused ? SDL_EVENT_WINDOW_FOCUS_GAINED : SDL_EVENT_WINDOW_FOCUS_LOST;
@@ -1146,7 +1271,7 @@ uint8_t gs_gfx_inject_focus(uint8_t focused) {
 /* Queues an input event as if it came from the keyboard or mouse, seen at
    the next frame(): what tests drive input with. */
 uint8_t gs_gfx_inject_key(gs_gfx_bytes name, uint8_t down) {
-    if (!gfx_need_device("inject_key")) return 0;
+    if (!gfx_need_open("inject_key")) return 0;
     SDL_Scancode sc = gfx_scancode(name);
     if (sc == SDL_SCANCODE_UNKNOWN) return 0;
     SDL_Event e;
@@ -1160,7 +1285,7 @@ uint8_t gs_gfx_inject_key(gs_gfx_bytes name, uint8_t down) {
 }
 
 void gs_gfx_inject_mouse(float x, float y, int64_t button, uint8_t down) {
-    if (!gfx_need_device("inject_mouse")) return;
+    if (!gfx_need_open("inject_mouse")) return;
     SDL_Event e;
     SDL_zero(e);
     e.type = SDL_EVENT_MOUSE_MOTION;
@@ -1193,7 +1318,7 @@ int64_t gs_gfx_events(gs_gfx_event_slice out) {
 }
 
 void gs_gfx_text_input(uint8_t on) {
-    if (!gfx_need_device("text_input") || !gfx.window) return;
+    if (!gfx_need_open("text_input") || !gfx.window) return;
     if (on) SDL_StartTextInput(gfx.window);
     else SDL_StopTextInput(gfx.window);
 }
@@ -1201,7 +1326,7 @@ void gs_gfx_text_input(uint8_t on) {
 /* Text as if typed, seen at the next frame(): a user event in the queue
    keeps its place among injected keys and clicks. */
 uint8_t gs_gfx_inject_text(gs_gfx_bytes text) {
-    if (!gfx_need_device("inject_text")) return 0;
+    if (!gfx_need_open("inject_text")) return 0;
     if (!gfx.inject_event) return gfx_fail("inject_text: SDL has no user event left");
     if (gfx.ninjected == gfx.injected_cap) {
         gfx.injected_cap = gfx.injected_cap ? gfx.injected_cap * 2 : 8;
@@ -1240,7 +1365,7 @@ int64_t gs_gfx_key_name(int64_t scancode, gs_gfx_bytes out) {
 /* Headless, gfx keeps a clipboard of its own, which keeps tests and the
    programs a test runner drives off the system's. */
 int64_t gs_gfx_clipboard(gs_gfx_bytes out) {
-    if (!gfx_need_device("clipboard")) return 0;
+    if (!gfx_need_open("clipboard")) return 0;
     char *text = gfx.window ? SDL_GetClipboardText() : gfx.clipboard;
     int64_t n = text ? (int64_t)strlen(text) : 0;
     int64_t k = n < out.len ? n : out.len;
@@ -1250,7 +1375,7 @@ int64_t gs_gfx_clipboard(gs_gfx_bytes out) {
 }
 
 uint8_t gs_gfx_set_clipboard(gs_gfx_bytes text) {
-    if (!gfx_need_device("set_clipboard")) return 0;
+    if (!gfx_need_open("set_clipboard")) return 0;
     size_t n = text.len > 0 ? (size_t)text.len : 0;
     char *copy = (char *)SDL_malloc(n + 1);
     if (!copy) return gfx_fail("out of memory for the clipboard");
