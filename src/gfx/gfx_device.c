@@ -38,6 +38,15 @@ bool gfx_misuse(const char *fmt, ...) {
 }
 
 bool gfx_sdl_fail(const char *what) {
+    /* A lost device fails every later wait and submit at once, so a program
+       drawing each frame would spin, submitting work that never runs. frame()
+       returns false from the next call instead, as if the window were closed. */
+    if (!gfx.lost && SDL_strstr(SDL_GetError(), "DEVICE_LOST")) {
+        gfx.lost = true;
+        gfx.quit = true;
+        fprintf(stderr, "gfx: the GPU device was lost (%s: %s); frame() returns false\n", what,
+                SDL_GetError());
+    }
     return gfx_fail("%s: %s", what, SDL_GetError());
 }
 
@@ -822,6 +831,7 @@ uint8_t gs_gfx_frame(void) {
         gfx_misuse("frame() inside a %s pass: end the pass first", gfx.pass ? "render" : "compute");
         return 0;
     }
+    if (gfx.lost) return 0;
     /* The first call starts the first frame; every later one ends one. With
        WAIT_WHEN_IDLE a frame that drew nothing isn't presented, and the next one
        waits for an event, up to GFX_IDLE_WAIT_MS so a program's timers still run. */

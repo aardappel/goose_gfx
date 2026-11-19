@@ -188,6 +188,7 @@ typedef struct {
     bool gpu_work;
     int expose;
     bool unshown;
+    bool lost;                          /* an SDL call failed with DEVICE_LOST */
 
     char error[1024];
     int64_t misuse;

@@ -365,8 +365,8 @@ fn driver() -> u8[>..] {
 
 // Ends the frame drawn since the last call, showing the screen in the
 // window, and handles the window's events: false once it has been asked to
-// close, or quit() was called. Called at the top of the loop, before the
-// first frame is drawn.
+// close, quit() was called, or the GPU device was lost. Called at the top of
+// the loop, before the first frame is drawn.
 extern fn frame_raw() -> bool = "gs_gfx_frame";
 fn frame() -> bool {
     let running = frame_raw();

@@ -161,6 +161,12 @@ fields in the same order, and the same constant values.
   Android recreating its surface), the present is retried for up to 8
   frames, then after each wait until it succeeds. On Android the flag turns
   off SDL's poll sentinel, which would end every wait at once.
+* **A lost device ends the program's loop.** Once Vulkan reports
+  `VK_ERROR_DEVICE_LOST`, every later wait and submit fails at once, so a
+  program drawing each frame would spin. gfx prints the first such failure,
+  and `frame()` returns false from then on, as if the window were closed.
+  Direct3D 12's device removal and Metal's loss aren't recognized yet, as
+  SDL words them differently.
 * **Everything is in pixels.** A window always asks for the display's full
   pixel density, so on a high-density display its screen has more pixels
   than its size in the display's coordinates, which SDL gives the mouse in:
