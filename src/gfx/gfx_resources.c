@@ -28,6 +28,13 @@ bool gfx_texture_format(int32_t format, SDL_GPUTextureFormat *out) {
         case GS_GFX_DEPTH24: *out = SDL_GPU_TEXTUREFORMAT_D24_UNORM; return true;
         case GS_GFX_DEPTH32F: *out = SDL_GPU_TEXTUREFORMAT_D32_FLOAT; return true;
         case GS_GFX_DEPTH24_STENCIL8: *out = SDL_GPU_TEXTUREFORMAT_D24_UNORM_S8_UINT; return true;
+        case GS_GFX_BC1: *out = SDL_GPU_TEXTUREFORMAT_BC1_RGBA_UNORM; return true;
+        case GS_GFX_BC3: *out = SDL_GPU_TEXTUREFORMAT_BC3_RGBA_UNORM; return true;
+        case GS_GFX_BC7: *out = SDL_GPU_TEXTUREFORMAT_BC7_RGBA_UNORM; return true;
+        case GS_GFX_ASTC_4x4: *out = SDL_GPU_TEXTUREFORMAT_ASTC_4x4_UNORM; return true;
+        case GS_GFX_ASTC_5x5: *out = SDL_GPU_TEXTUREFORMAT_ASTC_5x5_UNORM; return true;
+        case GS_GFX_ASTC_6x6: *out = SDL_GPU_TEXTUREFORMAT_ASTC_6x6_UNORM; return true;
+        case GS_GFX_ASTC_8x8: *out = SDL_GPU_TEXTUREFORMAT_ASTC_8x8_UNORM; return true;
         case GS_GFX_DEPTH:
             /* 32-bit float where it can be sampled too, as for a shadow map. */
             *out = gfx.dev && SDL_GPUTextureSupportsFormat(
@@ -40,6 +47,11 @@ bool gfx_texture_format(int32_t format, SDL_GPUTextureFormat *out) {
         default:
             return false;
     }
+}
+
+/* BC and ASTC: sampled only, uploaded in whole blocks. */
+static bool gfx_is_compressed(int32_t format) {
+    return format >= GS_GFX_BC1 && format <= GS_GFX_ASTC_8x8;
 }
 
 static bool gfx_is_depth(SDL_GPUTextureFormat f) {
@@ -347,7 +359,12 @@ gs_gfx_texture gs_gfx_create_texture(const gs_gfx_texture_desc *desc) {
         return h;
     }
     /* Generating mips draws into each level, which needs a color target. */
-    if (d.mips > 1 && (usage & SDL_GPU_TEXTUREUSAGE_SAMPLER) && !depth)
+    if (gfx_is_compressed(d.format) && usage != SDL_GPU_TEXTUREUSAGE_SAMPLER) {
+        gfx_misuse("a compressed texture can only be SAMPLED");
+        return h;
+    }
+    if (d.mips > 1 && (usage & SDL_GPU_TEXTUREUSAGE_SAMPLER) && !depth &&
+        !gfx_is_compressed(d.format))
         usage |= SDL_GPU_TEXTUREUSAGE_COLOR_TARGET;
     SDL_GPUTextureType type = (SDL_GPUTextureType)d.kind;
     if (!SDL_GPUTextureSupportsFormat(gfx.dev, format, type, usage)) {
@@ -421,8 +438,8 @@ static bool gfx_region(gfx_texture_slot *s, const gs_gfx_region *r, SDL_GPUTextu
 
 static bool gfx_texture_bytes(gfx_texture_slot *s, const SDL_GPUTextureRegion *reg, int64_t len,
                               const char *what) {
-    int64_t want = (int64_t)SDL_GPUTextureFormatTexelBlockSize(s->format) * reg->w * reg->h *
-                   reg->d;
+    /* Whole blocks: a compressed region's edges round up to them. */
+    int64_t want = (int64_t)SDL_CalculateGPUTextureFormatSize(s->format, reg->w, reg->h, reg->d);
     if (len != want)
         return gfx_misuse("%s: %lld bytes for a %u x %u x %u region of %lld", what,
                           (long long)len, reg->w, reg->h, reg->d, (long long)want);
@@ -448,8 +465,10 @@ static bool gfx_upload_texture(const SDL_GPUTextureRegion *reg, const void *data
     SDL_zero(src);
     src.transfer_buffer = tb;
     src.offset = at;
-    src.pixels_per_row = reg->w;
-    src.rows_per_layer = reg->h;
+    /* 0: tightly packed, in whole blocks. Vulkan's row length must be whole
+       blocks, which a compressed region's width need not be (2048 in 6x6). */
+    src.pixels_per_row = 0;
+    src.rows_per_layer = 0;
     SDL_UploadToGPUTexture(cp, &src, reg, false);
     SDL_EndGPUCopyPass(cp);
     gfx_staging_done(tb);
@@ -461,6 +480,10 @@ uint8_t gs_gfx_update_texture(gs_gfx_texture t, const gs_gfx_region *region, gs_
     gfx_texture_slot *s = gfx_texture_slot_of(t);
     if (!s) return 0;
     if (s->desc.samples > 1) return gfx_misuse("update_texture: a multisampled texture");
+    /* A compressed region's edges must fall on its blocks, so it takes whole
+       mips only, which is what a file of mips holds anyway. */
+    if (gfx_is_compressed(s->desc.format) && region->w != 0)
+        return gfx_misuse("update_texture: a compressed texture takes whole mips (region w 0)");
     SDL_GPUTextureRegion reg;
     if (!gfx_region(s, region, &reg, "update_texture") ||
         !gfx_texture_bytes(s, &reg, data.len, "update_texture"))
@@ -497,6 +520,8 @@ static bool gfx_readable(gfx_texture_slot *s, const char *what) {
     if (s->desc.samples > 1)
         return gfx_misuse("%s: a multisampled texture; read the texture it resolves to", what);
     if (gfx_is_depth(s->format)) return gfx_misuse("%s: a depth texture cannot be read back", what);
+    if (gfx_is_compressed(s->desc.format))
+        return gfx_misuse("%s: a compressed texture cannot be read back", what);
     return true;
 }
 
@@ -614,8 +639,9 @@ void gs_gfx_generate_mips(gs_gfx_texture t) {
     if (!gfx_need_device("generate_mips")) return;
     gfx_texture_slot *s = gfx_texture_slot_of(t);
     if (!s) return;
-    if (s->desc.mips < 2 || !(s->usage & SDL_GPU_TEXTUREUSAGE_SAMPLER)) {
-        gfx_misuse("generate_mips: a sampled texture with more than one mip");
+    if (s->desc.mips < 2 || !(s->usage & SDL_GPU_TEXTUREUSAGE_SAMPLER) ||
+        gfx_is_compressed(s->desc.format)) {
+        gfx_misuse("generate_mips: an uncompressed sampled texture with more than one mip");
         return;
     }
     SDL_GPUCommandBuffer *cb = gfx_copy_cmd(false, "generate_mips");
@@ -627,6 +653,17 @@ uint8_t gs_gfx_texture_info(gs_gfx_texture t, gs_gfx_texture_desc *out) {
     if (!s) return 0;
     *out = s->desc;
     return 1;
+}
+
+/* Whether `format` is one of gfx's and this device can make a 2D texture of
+   it with `usage`. */
+uint8_t gs_gfx_format_supported(int32_t format, int32_t usage) {
+    if (!gfx_need_device("format_supported")) return 0;
+    SDL_GPUTextureFormat f;
+    if (!gfx_texture_format(format, &f) || !usage || (usage & ~127)) return 0;
+    if (gfx_is_compressed(format) && usage != SDL_GPU_TEXTUREUSAGE_SAMPLER) return 0;
+    return SDL_GPUTextureSupportsFormat(gfx.dev, f, SDL_GPU_TEXTURETYPE_2D,
+                                        (SDL_GPUTextureUsageFlags)usage);
 }
 
 void gs_gfx_release_texture(gs_gfx_texture t) {
