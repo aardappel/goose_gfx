@@ -154,6 +154,7 @@ def main():
     runs, failures, reference = [], 0, {}
     gendir = outroot / "gen"
     gendir.mkdir(exist_ok=True)
+    runtime = tc.GooseRuntime(exe, gendir / "runtime")
     for mode, how in modes:
         argv = None
         if how is None:
@@ -168,7 +169,8 @@ def main():
                 print(f"FAIL {mode}: goose -o")
                 failures += 1
                 continue
-            ok, log = cc.compile(cfile, efile, opt=2, libs=libs, log=gendir / f"{mode}.log")
+            ok, log = cc.compile(cfile, efile, opt=2, libs=libs, runtime=runtime,
+                                 log=gendir / f"{mode}.log")
             if not ok:
                 print("\n".join(log.splitlines()[:12]))
                 print(f"FAIL {mode}: {cc.desc} could not build it")

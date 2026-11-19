@@ -695,6 +695,9 @@ fn main() {
     var sparks_before: float4[>..] = [];
     var shots: u8[][>..] = [];
     var frame = 0;
+    // gfx drops input while the window lacks the focus, which a window a
+    // terminal starts may not get (macOS doesn't give it).
+    gfx::inject_focus(true);
     while gfx::frame() {
         frame++;
         // Input, injected at fixed frames: Space pauses and resumes the
