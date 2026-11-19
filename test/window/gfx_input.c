@@ -29,6 +29,8 @@ static Uint32 SDLCALL push_wake(void *userdata, SDL_TimerID timer, Uint32 interv
     return 0;
 }
 
+static SDL_Joystick *virtual_pad;
+
 /* frame()'s next call, timed in milliseconds. */
 static Uint64 timed_frame(void) {
     Uint64 t = SDL_GetTicks();
@@ -43,6 +45,57 @@ static bool idles(void) {
     while (SDL_GetTicks() - start < 5000)
         if (timed_frame() >= 900) return true;
     return false;
+}
+
+/* WAIT_WHEN_IDLE with SDL's virtual gamepad: a press let go before frame()
+   counts, and with a pad open the wait is short, so a press or the slightest
+   stick move shows within a frame or two. */
+static void gamepad_checks(void) {
+    SDL_VirtualJoystickDesc desc;
+    SDL_INIT_INTERFACE(&desc);
+    desc.type = SDL_JOYSTICK_TYPE_GAMEPAD;
+    desc.naxes = SDL_GAMEPAD_AXIS_COUNT;
+    desc.nbuttons = SDL_GAMEPAD_BUTTON_COUNT;
+    SDL_JoystickID id = SDL_AttachVirtualJoystick(&desc);
+    virtual_pad = id ? SDL_OpenJoystick(id) : NULL;
+    check(virtual_pad != NULL, "attach a virtual gamepad");
+    if (!virtual_pad) return;
+    /* A real pad connected may hold a slot already: the virtual one's is the
+       one that fills. */
+    bool before[GS_GFX_MAX_GAMEPADS];
+    for (int i = 0; i < GS_GFX_MAX_GAMEPADS; i++) before[i] = gs_gfx_gamepad_connected(i);
+    gs_gfx_frame();
+    int slot = -1;
+    for (int i = 0; i < GS_GFX_MAX_GAMEPADS; i++)
+        if (slot < 0 && !before[i] && gs_gfx_gamepad_connected(i)) slot = i;
+    check(slot >= 0, "the virtual gamepad fills a slot");
+    if (slot < 0) return;
+
+    SDL_SetJoystickVirtualButton(virtual_pad, SDL_GAMEPAD_BUTTON_SOUTH, true);
+    SDL_UpdateJoysticks();
+    SDL_SetJoystickVirtualButton(virtual_pad, SDL_GAMEPAD_BUTTON_SOUTH, false);
+    SDL_UpdateJoysticks();
+    gs_gfx_frame();
+    check(gs_gfx_gamepad_pressed(slot, SDL_GAMEPAD_BUTTON_SOUTH) && !gs_gfx_gamepad_down(slot, SDL_GAMEPAD_BUTTON_SOUTH),
+          "a press let go before frame() still counts");
+
+    /* Until the present's retries run out, the hidden window may not wait. */
+    Uint64 idle = 0;
+    for (int i = 0; i < 12; i++) idle = timed_frame();
+    check(idle >= 10 && idle < 100, "with a pad open, a frame that drew nothing waits briefly");
+    SDL_SetJoystickVirtualAxis(virtual_pad, SDL_GAMEPAD_AXIS_LEFTX, 1500);
+    timed_frame();
+    check(gs_gfx_gamepad_axis(slot, SDL_GAMEPAD_AXIS_LEFTX) > 0.0f,
+          "a slight stick move shows, with no deadzone");
+    SDL_SetJoystickVirtualButton(virtual_pad, SDL_GAMEPAD_BUTTON_EAST, true);
+    timed_frame();
+    check(gs_gfx_gamepad_pressed(slot, SDL_GAMEPAD_BUTTON_EAST), "a press shows at the next frame");
+    SDL_SetJoystickVirtualButton(virtual_pad, SDL_GAMEPAD_BUTTON_EAST, false);
+    printf("gamepad wait: %llu ms\n", (unsigned long long)idle);
+    SDL_CloseJoystick(virtual_pad);
+    SDL_DetachVirtualJoystick(id);
+    gs_gfx_frame();
+    check(!gs_gfx_gamepad_connected(slot), "the virtual gamepad leaves its slot");
 }
 
 /* WAIT_WHEN_IDLE: a frame that drew nothing makes the next frame() wait for an
@@ -67,12 +120,19 @@ static void wait_checks(void) {
     Uint64 woken = timed_frame();
     check(woken >= 150 && woken < 600, "an event ends the wait");
     printf("wait: an event at 200 ms ended it at %llu ms\n", (unsigned long long)woken);
+    /* The wait reads a pad only while the window has focus. */
+    gs_gfx_inject_focus(true);
+    gs_gfx_frame();
+    gamepad_checks();
     gs_gfx_close();
 }
 
 int main(void) {
     /* Keep SDL alive after gfx closes, so cursor cleanup can be inspected. */
     if (!SDL_Init(SDL_INIT_VIDEO)) return 1;
+    /* The hidden window never has the desktop's focus, without which SDL drops
+       a pad's input. */
+    SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
     check(gs_gfx_pixel_density() == 1 && gs_gfx_display_scale() == 1,
           "scales are 1 before any window");
     gs_gfx_bytes title = { (uint8_t *)"Goose input regression", 22 };
