@@ -55,8 +55,11 @@ uint8_t gs_gfx_begin_pass(const gs_gfx_pass_desc *d) {
         ct[i].load_op = d->clear_color ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
         ct[i].store_op = SDL_GPU_STOREOP_STORE;
         /* Cleared anyway, so while an earlier frame still reads the old
-           contents, SDL may give it fresh memory rather than wait. */
-        ct[i].cycle = d->clear_color != 0;
+           contents, SDL may give it fresh memory rather than wait. Not the
+           screen: the last frame's blit nearly always still reads it, so
+           cycling it keeps two or three window-sized copies for good, and the
+           GPU orders the clear after that blit without the CPU waiting. */
+        ct[i].cycle = d->clear_color != 0 && d->color[i].id != gfx.screen.id;
         if (d->resolve[i].id) {
             gfx_texture_slot *r = gfx_texture_slot_of(d->resolve[i]);
             if (!r) return 0;
@@ -91,7 +94,8 @@ uint8_t gs_gfx_begin_pass(const gs_gfx_pass_desc *d) {
         dt.store_op = SDL_GPU_STOREOP_STORE;
         dt.stencil_load_op = SDL_GPU_LOADOP_CLEAR;
         dt.stencil_store_op = SDL_GPU_STOREOP_STORE;
-        dt.cycle = d->clear_depth != 0;
+        /* Not the screen's, for the same reason as the screen. */
+        dt.cycle = d->clear_depth != 0 && d->depth.id != gfx.screen_depth.id;
         t.has_depth = true;
         t.depth = s->format;
     }

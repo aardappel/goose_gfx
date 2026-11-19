@@ -376,8 +376,9 @@ extern fn fullscreen() -> bool = "gs_gfx_fullscreen";
 extern fn maximize() = "gs_gfx_maximize";
 
 // The screen: what a frame draws into, an RGBA8 texture of the window's
-// size in pixels, with a depth texture to go with it. Both keep their
-// handles when the window resizes.
+// size in pixels. Its depth texture is made on the first screen_depth(), so
+// a 2D program that wants none passes Texture { 0 } to begin_pass instead
+// of calling begin_screen. Both keep their handles when the window resizes.
 extern fn screen() -> Texture = "gs_gfx_screen";
 extern fn screen_depth() -> Texture = "gs_gfx_screen_depth";
 extern fn screen_size_into(out: int2&) = "gs_gfx_screen_size";

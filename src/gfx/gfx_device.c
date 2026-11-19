@@ -227,29 +227,24 @@ static bool gfx_screen_texture(gs_gfx_texture *h, SDL_GPUTextureFormat format, u
     return true;
 }
 
-bool gfx_create_screen(int w, int h) {
-    if (w < 1) w = 1;
-    if (h < 1) h = 1;
+/* The screen's depth target, made the first time a program asks for it and
+   remade with the screen after that: a 2D program never asks, so it never
+   pays for a window-sized depth buffer. */
+static bool gfx_has_screen_depth(void) {
+    return gfx.screen_depth.id && gfx_table_find(&gfx.textures, gfx.screen_depth.id);
+}
+
+static bool gfx_create_screen_depth(int w, int h) {
     SDL_GPUTextureFormat depth;
     gfx_texture_format(GS_GFX_DEPTH, &depth);
-    if (!gfx_screen_texture(&gfx.screen, SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
-                            SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER,
-                            GS_GFX_RGBA8, w, h) ||
-        !gfx_screen_texture(&gfx.screen_depth, depth, SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET,
+    if (!gfx_screen_texture(&gfx.screen_depth, depth, SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET,
                             GS_GFX_DEPTH, w, h))
         return false;
-    gfx.width = w;
-    gfx.height = h;
-    /* Black and far until the program draws, rather than whatever the
-       memory held. */
+    /* Far until the program draws, rather than whatever the memory held; asked
+       for inside a pass, it waits for the program's own clear. */
+    if (gfx.pass || gfx.cpass) return true;
     SDL_GPUCommandBuffer *cb = gfx_cmd();
     if (!cb) return false;
-    SDL_GPUColorTargetInfo ct;
-    SDL_zero(ct);
-    ct.texture = gfx_texture_slot_of(gfx.screen)->tex;
-    ct.clear_color.a = 1.0f;
-    ct.load_op = SDL_GPU_LOADOP_CLEAR;
-    ct.store_op = SDL_GPU_STOREOP_STORE;
     SDL_GPUDepthStencilTargetInfo dt;
     SDL_zero(dt);
     dt.texture = gfx_texture_slot_of(gfx.screen_depth)->tex;
@@ -258,9 +253,32 @@ bool gfx_create_screen(int w, int h) {
     dt.store_op = SDL_GPU_STOREOP_STORE;
     dt.stencil_load_op = SDL_GPU_LOADOP_CLEAR;
     dt.stencil_store_op = SDL_GPU_STOREOP_STORE;
-    SDL_GPURenderPass *p = SDL_BeginGPURenderPass(cb, &ct, 1, &dt);
+    SDL_GPURenderPass *p = SDL_BeginGPURenderPass(cb, NULL, 0, &dt);
     if (p) SDL_EndGPURenderPass(p);
     return true;
+}
+
+bool gfx_create_screen(int w, int h) {
+    if (w < 1) w = 1;
+    if (h < 1) h = 1;
+    if (!gfx_screen_texture(&gfx.screen, SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
+                            SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER,
+                            GS_GFX_RGBA8, w, h))
+        return false;
+    gfx.width = w;
+    gfx.height = h;
+    /* Black until the program draws, rather than whatever the memory held. */
+    SDL_GPUCommandBuffer *cb = gfx_cmd();
+    if (!cb) return false;
+    SDL_GPUColorTargetInfo ct;
+    SDL_zero(ct);
+    ct.texture = gfx_texture_slot_of(gfx.screen)->tex;
+    ct.clear_color.a = 1.0f;
+    ct.load_op = SDL_GPU_LOADOP_CLEAR;
+    ct.store_op = SDL_GPU_STOREOP_STORE;
+    SDL_GPURenderPass *p = SDL_BeginGPURenderPass(cb, &ct, 1, NULL);
+    if (p) SDL_EndGPURenderPass(p);
+    return !gfx_has_screen_depth() || gfx_create_screen_depth(w, h);
 }
 
 gs_gfx_texture gs_gfx_screen(void) {
@@ -269,7 +287,8 @@ gs_gfx_texture gs_gfx_screen(void) {
 }
 
 gs_gfx_texture gs_gfx_screen_depth(void) {
-    gfx_need_device("screen_depth");
+    if (gfx_need_device("screen_depth") && gfx.screen.id && !gfx_has_screen_depth())
+        gfx_create_screen_depth(gfx.width, gfx.height);
     return gfx.screen_depth;
 }
 

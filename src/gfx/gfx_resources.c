@@ -631,7 +631,7 @@ uint8_t gs_gfx_texture_info(gs_gfx_texture t, gs_gfx_texture_desc *out) {
 
 void gs_gfx_release_texture(gs_gfx_texture t) {
     if (!gfx_need_device("release_texture")) return;
-    if (t.id == gfx.screen.id || t.id == gfx.screen_depth.id) {
+    if (t.id && (t.id == gfx.screen.id || t.id == gfx.screen_depth.id)) {
         gfx_misuse("release_texture: the screen belongs to gfx");
         return;
     }
