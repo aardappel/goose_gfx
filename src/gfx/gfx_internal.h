@@ -181,6 +181,14 @@ typedef struct {
     uint64_t start_ns, last_ns;
     double delta;
     int64_t frames;
+    /* WAIT_WHEN_IDLE: frame() presents only after GPU work since the last one,
+       or while expose counts down (the window was exposed, restored or resized,
+       or a drawn frame got no image); otherwise it waits for an event. While
+       a drawn frame is unshown, each wakeup from the wait tries again. */
+    bool gpu_work;
+    int expose;
+    bool unshown;
+    bool lost;                          /* an SDL call failed with DEVICE_LOST */
 
     char error[1024];
     int64_t misuse;

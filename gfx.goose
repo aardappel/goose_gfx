@@ -54,6 +54,10 @@ let WINDOW_HIDDEN: i32 = 2;
 let WINDOW_FULLSCREEN: i32 = 4;
 let NO_VSYNC: i32 = 16;
 let DEBUG: i32 = 32;            // validation layers, where installed; on in a debug build of gfx
+// A frame that drew nothing isn't presented, and the next frame() waits for an
+// event, up to a second: an idle program uses no GPU and next to no CPU. A
+// resize leaves the screen black, so redraw when screen_size() changes.
+let WAIT_WHEN_IDLE: i32 = 256;
 
 // System cursor shapes.
 let CURSOR_DEFAULT: i32 = 0;
@@ -361,8 +365,8 @@ fn driver() -> u8[>..] {
 
 // Ends the frame drawn since the last call, showing the screen in the
 // window, and handles the window's events: false once it has been asked to
-// close, or quit() was called. Called at the top of the loop, before the
-// first frame is drawn.
+// close, quit() was called, or the GPU device was lost. Called at the top of
+// the loop, before the first frame is drawn.
 extern fn frame_raw() -> bool = "gs_gfx_frame";
 fn frame() -> bool {
     let running = frame_raw();
