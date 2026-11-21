@@ -149,6 +149,18 @@ fields in the same order, and the same constant values.
   Clearing the screen or its depth doesn't cycle them: the last frame nearly
   always still uses them, so cycling would keep two or three window-sized
   copies of each.
+* **Drawing on demand** is the `WAIT_WHEN_IDLE` open flag. Without it every
+  `frame()` presents. With it, `frame()` presents only when something used
+  the GPU since the last one (a pass, a copy, an upload) or the window needs
+  its image again (exposed, shown, restored, back in the foreground). After a
+  frame that presented nothing, the next `frame()` waits for an event, up to
+  a second so a program's timers still run, except after `quit()`;
+  `delta_time()` leaves the wait out, so a timer that runs while idle reads
+  `time()`. A resize makes a new, black screen, so a program redraws when
+  `screen_size()` changes. When the window gives no image (minimized, or
+  Android recreating its surface), the present is retried for up to 8
+  frames, then after each wait until it succeeds. On Android the flag turns
+  off SDL's poll sentinel, which would end every wait at once.
 * **Everything is in pixels.** A window always asks for the display's full
   pixel density, so on a high-density display its screen has more pixels
   than its size in the display's coordinates, which SDL gives the mouse in:
@@ -181,7 +193,11 @@ fields in the same order, and the same constant values.
   one has no gamepads rather than a failed `open`. Buttons are kept from SDL's
   events as held state plus the latest `frame()`'s edges, as keys are, and a
   pad that disconnects releases what it held. Axes and rumble go straight to
-  SDL, with no deadzone.
+  SDL, with no deadzone. SDL reads an open pad every millisecond, which would
+  keep `WAIT_WHEN_IDLE`'s wait awake, so with that flag gfx reads the pads
+  at each `frame()`, and while a pad is open and the window has focus the
+  idle wait lasts 16 ms rather than a second, so a stick move shows as soon
+  as it would while drawing.
 * **Fullscreen** is borderless, at the desktop's resolution, and SDL changes it
   asynchronously: `fullscreen()` can lag a frame or two behind
   `set_fullscreen`, and the screen follows the window as with any resize.
@@ -238,8 +254,13 @@ focus loss and reacquisition, release edges/events, ignored background input,
 and headless close/reopen. `python test/window/run_input_test.py --exe
 <goose>` complements it on a machine with a display and GPU: a hidden real
 window verifies the SDL mode/visibility setters, unrelated-window focus
-filtering, double-click cleanup, and cursor restoration after close. Physical
-mouse confinement and Alt-Tab still need an interactive check on each platform.
+filtering, double-click cleanup, cursor restoration after close, and that
+with `WAIT_WHEN_IDLE` `frame()` waits after a frame that drew nothing, not
+after one that drew, until an event; and with SDL's virtual gamepad, that a
+press let go before `frame()` still counts, that the wait is short with a pad
+open, and that a slight stick move and a press show at the next frame.
+Physical mouse confinement and Alt-Tab still need an interactive check on
+each platform.
 
 * **`test/gfx/`** in the regular suite: headless programs that render into
   textures and read them back (geometry, depth, instancing, storage-buffer
