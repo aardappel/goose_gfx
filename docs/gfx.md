@@ -206,6 +206,12 @@ fields in the same order, and the same constant values.
   uploads start on a 512-byte boundary, Direct3D 12's placement alignment
   (otherwise SDL copies the data again), and buffer uploads on a 16-byte one.
   Larger uploads get a buffer of their own.
+* **Compressed textures** (`BC1`, `BC3`, `BC7`, `ASTC_4x4` to `ASTC_8x8`) are
+  sampled only and uploaded a whole mip at a time (a region of `w` 0), in
+  whole blocks, tightly packed: Vulkan's row length must be a whole number
+  of blocks, which a mip's width need not be. They can't be read back or
+  given `generate_mips`. `format_supported` asks the device whether it
+  samples a format: BC is a desktop GPU's, ASTC a mobile or Apple GPU's.
 * **Shaders**: the device takes SPIR-V where it can, else DXBC, else MSL. DXBC
   is the blob's HLSL compiled at load time by `d3dcompiler_47.dll`, which ships
   with Windows 10 and 11, loaded by name. Each SDL shader is made once per blob.

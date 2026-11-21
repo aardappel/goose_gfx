@@ -188,6 +188,7 @@ typedef struct {
     X(void, gs_gfx_generate_mips, (gs_gfx_texture t)) \
     X(uint8_t, gs_gfx_texture_info, (gs_gfx_texture t, gs_gfx_texture_desc *out)) \
     X(void, gs_gfx_release_texture, (gs_gfx_texture t)) \
+    X(uint8_t, gs_gfx_format_supported, (int32_t format, int32_t usage)) \
     X(gs_gfx_sampler, gs_gfx_create_sampler, (const gs_gfx_sampler_desc *desc)) \
     X(void, gs_gfx_release_sampler, (gs_gfx_sampler s)) \
     /* Pipelines. */ \
@@ -295,6 +296,14 @@ GS_GFX_API(GS_GFX_PROTO)
     X(i32, DEPTH32F, 18) \
     X(i32, DEPTH24_STENCIL8, 19) \
     X(i32, DEPTH, 20) \
+    /* Block-compressed texture formats. */ \
+    X(i32, BC1, 21) \
+    X(i32, BC3, 22) \
+    X(i32, BC7, 23) \
+    X(i32, ASTC_4x4, 24) \
+    X(i32, ASTC_5x5, 25) \
+    X(i32, ASTC_6x6, 26) \
+    X(i32, ASTC_8x8, 27) \
     /* Samplers: SDL_GPUFilter, SDL_GPUSamplerAddressMode, SDL_GPUCompareOp. */ \
     X(i32, NEAREST, 0) \
     X(i32, LINEAR, 1) \
