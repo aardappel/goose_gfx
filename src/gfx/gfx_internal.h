@@ -51,6 +51,7 @@ typedef struct {
     gs_gfx_texture_desc desc;   /* as created: mips resolved, formats Goose's */
     SDL_GPUTextureFormat format;
     uint32_t usage;             /* SDL usage flags */
+    bool discarded;             /* multisampled, and a resolving pass dropped its samples */
 } gfx_texture_slot;
 
 typedef struct {
