@@ -117,6 +117,11 @@ typedef struct {
     X(uint8_t, gs_gfx_available, (void)) \
     X(uint8_t, gs_gfx_open, (gs_gfx_bytes title, int64_t width, int64_t height, int64_t flags)) \
     X(uint8_t, gs_gfx_open_headless, (int64_t width, int64_t height, int64_t flags)) \
+    X(uint64_t, gs_gfx_native_window, (void)) \
+    X(uint64_t, gs_gfx_native_display, (void)) \
+    X(int64_t, gs_gfx_native_kind, (void)) \
+    X(void, gs_gfx_presented, (uint8_t shown)) \
+    X(uint8_t, gs_gfx_needs_present, (void)) \
     X(void, gs_gfx_close, (void)) \
     X(int64_t, gs_gfx_error, (gs_gfx_bytes out)) \
     X(int64_t, gs_gfx_misuse_count, (void)) \
@@ -230,6 +235,11 @@ GS_GFX_API(GS_GFX_PROTO)
     X(i32, WINDOW_FULLSCREEN, 4) \
     X(i32, NO_VSYNC, 16) \
     X(i32, DEBUG, 32) \
+    X(i32, WAIT_WHEN_IDLE, 256) \
+    X(i32, WINDOW_ONLY, 64) \
+    /* native_kind() on Linux. */ \
+    X(i32, NATIVE_WAYLAND, 1) \
+    X(i32, NATIVE_X11, 2) \
     /* System cursor shapes, SDL_SystemCursor. */ \
     X(i32, CURSOR_DEFAULT, 0) \
     X(i32, CURSOR_TEXT, 1) \

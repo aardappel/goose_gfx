@@ -54,6 +54,16 @@ let WINDOW_HIDDEN: i32 = 2;
 let WINDOW_FULLSCREEN: i32 = 4;
 let NO_VSYNC: i32 = 16;
 let DEBUG: i32 = 32;            // validation layers, where installed; on in a debug build of gfx
+// A frame that drew nothing isn't presented, and the next frame() waits for an
+// event, up to a second: an idle program uses no GPU and next to no CPU. A
+// resize leaves the screen black, so redraw when screen_size() changes.
+let WAIT_WHEN_IDLE: i32 = 256;
+// A window, input, events and time, and no GPU device: another renderer draws
+// into native_window() and tells presented() what it showed each frame.
+let WINDOW_ONLY: i32 = 64;
+// native_kind() on Linux: what native_window() and native_display() are.
+let NATIVE_WAYLAND: i32 = 1;
+let NATIVE_X11: i32 = 2;
 
 // System cursor shapes.
 let CURSOR_DEFAULT: i32 = 0;
@@ -328,6 +338,24 @@ fn open(title: const u8[:], width: i64, height: i64) -> bool { open(title, width
 // shows: for tests, and for tools that only compute or render to files.
 extern fn open_headless(width: i64, height: i64, flags: i64) -> bool = "gs_gfx_open_headless";
 fn open_headless(width: i64, height: i64) -> bool { open_headless(width, height, 0) }
+// WINDOW_ONLY: the window's native handle for the renderer that draws into
+// it, as a u64: a CAMetalLayer on Apple's systems, the HWND on Windows, the
+// ANativeWindow on Android (a new one each time the app comes back to the
+// foreground, 0 in the background), on Linux the wl_surface on Wayland or the
+// X11 window's number; 0 headless.
+extern fn native_window() -> u64 = "gs_gfx_native_window";
+// WINDOW_ONLY on Linux: the wl_display or X11 Display* that native_window()
+// belongs to; 0 elsewhere and headless.
+extern fn native_display() -> u64 = "gs_gfx_native_display";
+// WINDOW_ONLY on Linux: NATIVE_WAYLAND or NATIVE_X11, whichever SDL opened
+// (Wayland where there is one; SDL_VIDEO_DRIVER chooses); 0 elsewhere.
+extern fn native_kind() -> i64 = "gs_gfx_native_kind";
+// WINDOW_ONLY: whether the renderer showed this frame. A frame that showed
+// nothing makes the next frame() wait for an event, as gfx's own frames do.
+extern fn presented(shown: bool) = "gs_gfx_presented";
+// WINDOW_ONLY: the window was exposed, shown or resized, so the renderer
+// presents this frame though nothing changed.
+extern fn needs_present() -> bool = "gs_gfx_needs_present";
 extern fn close_raw() = "gs_gfx_close";
 fn close() {
     check();
