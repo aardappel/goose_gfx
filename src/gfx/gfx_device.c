@@ -385,7 +385,24 @@ static bool gfx_start(bool windowed, gs_gfx_bytes title, int64_t width, int64_t 
 #endif
     const char *env = SDL_getenv("GOOSE_GFX_DEBUG");
     if (env) debug = SDL_atoi(env) != 0;
-    gfx.dev = SDL_CreateGPUDevice(formats, debug, NULL);
+    /* gfx always clips depth, so it never needs Vulkan's depth clamp. Shaders
+       may use clip distances, so they stay on where the GPU has them; a device
+       without them (Mali's Vulkan) gets a second try. */
+    SDL_PropertiesID props = SDL_CreateProperties();
+    SDL_SetBooleanProperty(props, SDL_PROP_GPU_DEVICE_CREATE_SHADERS_SPIRV_BOOLEAN,
+                           (formats & SDL_GPU_SHADERFORMAT_SPIRV) != 0);
+    SDL_SetBooleanProperty(props, SDL_PROP_GPU_DEVICE_CREATE_SHADERS_MSL_BOOLEAN,
+                           (formats & SDL_GPU_SHADERFORMAT_MSL) != 0);
+    SDL_SetBooleanProperty(props, SDL_PROP_GPU_DEVICE_CREATE_SHADERS_DXBC_BOOLEAN,
+                           (formats & SDL_GPU_SHADERFORMAT_DXBC) != 0);
+    SDL_SetBooleanProperty(props, SDL_PROP_GPU_DEVICE_CREATE_DEBUGMODE_BOOLEAN, debug);
+    SDL_SetBooleanProperty(props, SDL_PROP_GPU_DEVICE_CREATE_FEATURE_DEPTH_CLAMPING_BOOLEAN, false);
+    gfx.dev = SDL_CreateGPUDeviceWithProperties(props);
+    if (!gfx.dev) {
+        SDL_SetBooleanProperty(props, SDL_PROP_GPU_DEVICE_CREATE_FEATURE_CLIP_DISTANCE_BOOLEAN, false);
+        gfx.dev = SDL_CreateGPUDeviceWithProperties(props);
+    }
+    SDL_DestroyProperties(props);
     if (!gfx.dev) {
         gfx_fail("no GPU device: %s", SDL_GetError());
         gs_gfx_close();
