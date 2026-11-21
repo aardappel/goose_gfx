@@ -272,11 +272,11 @@ mouse confinement and Alt-Tab still need an interactive check on each platform.
 
 ### Platforms tested
 
-| | Windows 11 (RTX 3080) | Linux (Ubuntu 24.04 under WSL2, WSLg) | macOS |
+| | Windows 11 (RTX 3080) | Linux (Ubuntu 24.04 under WSL2, WSLg) | macOS 26 (M1 Pro) |
 |---|---|---|---|
-| Build, opt-out builds | yes | yes | not run |
-| Suite, incl. `test/gfx/` | yes: MSVC, TinyCC | yes: gcc, TinyCC; sanitizer profile without SDL | not run |
-| Showcase | JIT, cl, clang-cl, clang; Direct3D 12 and Vulkan | JIT, gcc, clang; Vulkan | not run |
+| Build, opt-out builds | yes | yes | yes |
+| Suite, incl. `test/gfx/` | yes: MSVC, TinyCC | yes: gcc, TinyCC; sanitizer profile without SDL | yes: clang, TinyCC |
+| Showcase | JIT, cl, clang-cl, clang; Direct3D 12 and Vulkan | JIT, gcc, clang; Vulkan | JIT, clang; Metal |
 
 On Windows the showcase's screenshots from Direct3D 12 and Vulkan differ by
 0.65 of 255 per channel on average. `open_headless` (and a program run with
@@ -288,10 +288,8 @@ runner's case). It does not try the display servers first: in WSL, with
 seconds to fail before the fallback, on every program. On Apple's systems
 headless uses the default driver (Cocoa), which starts at once without a
 display: SDL_GPU's Metal backend needs a video driver that makes Metal
-views, which the offscreen driver doesn't. Nothing else on macOS has
-run: the MSL that cute_spirv emits, SDL's Metal backend under this layer,
-the framework list in `link-cc.rsp`, and TinyCC's arm64 calls into the layer
-are all unverified until CI or a Mac runs them.
+views, which the offscreen driver doesn't. On macOS the showcase's
+screenshots from TinyCC and clang are identical.
 
 ## Decisions on the plan's open questions
 
