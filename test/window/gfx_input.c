@@ -16,6 +16,60 @@ static void check(bool ok, const char *what) {
     }
 }
 
+static Uint32 wake_event;
+
+static Uint32 SDLCALL push_wake(void *userdata, SDL_TimerID timer, Uint32 interval) {
+    (void)userdata;
+    (void)timer;
+    (void)interval;
+    SDL_Event e;
+    SDL_zero(e);
+    e.type = wake_event;
+    SDL_PushEvent(&e);
+    return 0;
+}
+
+/* frame()'s next call, timed in milliseconds. */
+static Uint64 timed_frame(void) {
+    Uint64 t = SDL_GetTicks();
+    gs_gfx_frame();
+    return SDL_GetTicks() - t;
+}
+
+/* Whether a frame() waits its full second within 5 s; until one does, the
+   window may still be showing. */
+static bool idles(void) {
+    Uint64 start = SDL_GetTicks();
+    while (SDL_GetTicks() - start < 5000)
+        if (timed_frame() >= 900) return true;
+    return false;
+}
+
+/* WAIT_WHEN_IDLE: a frame that drew nothing makes the next frame() wait for an
+   event, up to a second, which delta_time() leaves out; one that drew doesn't. */
+static void wait_checks(void) {
+    gs_gfx_bytes title = { (uint8_t *)"Goose wait regression", 21 };
+    check(gs_gfx_open(title, 64, 48, GS_GFX_WINDOW_HIDDEN | GS_GFX_WAIT_WHEN_IDLE),
+          "open WAIT_WHEN_IDLE");
+    gs_gfx_frame();
+    check(idles(), "a frame that drew nothing waits");
+    check(gs_gfx_delta_time() < 0.5, "delta_time() leaves out the wait");
+    gs_gfx_pass_desc pass;
+    SDL_zero(pass);
+    pass.color[0] = gs_gfx_screen();
+    pass.clear_color = 1;
+    check(gs_gfx_begin_pass(&pass), "clear the screen");
+    gs_gfx_end_pass();
+    check(timed_frame() < 500, "a frame that drew doesn't wait");
+    check(idles(), "the frame after it waits again");
+    wake_event = SDL_RegisterEvents(1);
+    SDL_AddTimer(200, push_wake, NULL);
+    Uint64 woken = timed_frame();
+    check(woken >= 150 && woken < 600, "an event ends the wait");
+    printf("wait: an event at 200 ms ended it at %llu ms\n", (unsigned long long)woken);
+    gs_gfx_close();
+}
+
 int main(void) {
     /* Keep SDL alive after gfx closes, so cursor cleanup can be inspected. */
     if (!SDL_Init(SDL_INIT_VIDEO)) return 1;
@@ -44,6 +98,9 @@ int main(void) {
     SDL_WindowID id = SDL_GetWindowID(window);
     gs_gfx_frame();
     check(!gs_gfx_focused(), "a hidden window starts without focus");
+    bool waited = false;
+    for (int i = 0; i < 4; i++) waited = waited || timed_frame() >= 500;
+    check(!waited, "without WAIT_WHEN_IDLE frame() doesn't wait");
 
     int window_w = 0, window_h = 0;
     SDL_GetWindowSize(window, &window_w, &window_h);
@@ -129,6 +186,7 @@ int main(void) {
 
     check(gs_gfx_pixel_density() == 1 && gs_gfx_display_scale() == 1,
           "scales are 1 after close");
+    wait_checks();
     check(gs_gfx_open_headless(16, 16, 0), "reopen headless after releasing cursors");
     check(gs_gfx_pixel_density() == 1 && gs_gfx_display_scale() == 1,
           "scales are 1 headless");
