@@ -167,6 +167,12 @@ fields in the same order, and the same constant values.
   and `frame()` returns false from then on, as if the window were closed.
   Direct3D 12's device removal and Metal's loss aren't recognized yet, as
   SDL words them differently.
+* **A resolving pass is its multisampled targets' last.** A pass that
+  resolves drops the samples of its multisampled color and depth targets
+  rather than store them, so a tiling GPU never writes them to memory. A
+  later pass that loads them rather than clears them is a misuse. A pass
+  that doesn't resolve stores them, so a frame can draw over several passes
+  and resolve in the last. Multisampled targets aren't cycled on clear.
 * **Everything is in pixels.** A window always asks for the display's full
   pixel density, so on a high-density display its screen has more pixels
   than its size in the display's coordinates, which SDL gives the mouse in:
